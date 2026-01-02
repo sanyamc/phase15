@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PHASE 15 | CLOUD FIRST</title>
+    <title>PHASE 15 | ELITE TRACKER</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -15,14 +15,13 @@
         .tab-btn { flex: 1; padding: 14px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #475569; border-bottom: 2px solid transparent; }
         .tab-active { color: #3b82f6; border-bottom: 2px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
         .accent-text { background: linear-gradient(to right, #60a5fa, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .loading-pulse { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        .history-card { background: rgba(15, 23, 42, 0.8); border-top: 1px solid rgba(59, 130, 246, 0.3); }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwA2DHXoElBhy242D5238NMfjS1c49bG2q5bRDjxbmswP1U9grG8PTipS_s6p-LpI7e/exec';
+        const SCRIPT_URL = 'PASTE_YOUR_SCRIPT_URL_HERE';
         const { createElement: h, useState, useEffect } = React;
 
         function App() {
@@ -41,7 +40,6 @@
                 'Half-Marathon Prep': [{n: 'Zone 2 Foundation Run', s: 1, r: '45 min'}, {n: 'Speed Intervals', s: 6, r: '400m'}]
             };
 
-            // CLOUD FETCH ON OPEN
             useEffect(() => {
                 async function fetchData() {
                     try {
@@ -50,56 +48,49 @@
                         setWorkouts(data.workouts || []);
                         setMetrics(data.metrics || []);
                     } catch (e) {
-                        console.error("Cloud fetch failed, using local backup", e);
-                        setWorkouts(JSON.parse(localStorage.getItem('p15_w_bk') || '[]'));
-                        setMetrics(JSON.parse(localStorage.getItem('p15_m_bk') || '[]'));
+                        console.error("Fetch failed", e);
                     }
                     setLoading(false);
                 }
                 fetchData();
             }, []);
 
-            const syncToCloud = (type, payload) => {
-                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType: type, ...payload}) });
-            };
-
             const saveWkt = () => {
                 const text = exData.map(e => `${e.name}\n${e.sets.map((s,i) => `S${i+1}: ${s.w || '0'}lb x ${s.r || '0'}`).join(' | ')}`).join('\n\n');
                 const log = { type: activeWkt, date: new Date().toLocaleDateString(), content: text };
                 const updated = [log, ...workouts];
                 setWorkouts(updated);
-                localStorage.setItem('p15_w_bk', JSON.stringify(updated));
-                syncToCloud('lift', log);
-                setActiveWkt(null); setTab('history');
+                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'lift', ...log}) });
+                setActiveWkt(null); setTab('dashboard');
             };
 
             const saveMetric = () => {
                 const w = document.getElementById('w-val').value, bf = document.getElementById('bf-val').value;
                 if(!w && !bf) return;
                 const log = { w: parseFloat(w)||0, bf: parseFloat(bf)||0, date: new Date().toLocaleDateString() };
-                const updated = [log, ...metrics];
-                setMetrics(updated);
-                localStorage.setItem('p15_m_bk', JSON.stringify(updated));
-                syncToCloud('metric', {weight: log.w, bodyfat: log.bf, date: log.date});
+                setMetrics([log, ...metrics]);
+                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'metric', weight: log.w, bodyfat: log.bf, date: log.date}) });
                 setTab('dashboard');
             };
 
             const stats = (() => {
                 const latest = metrics[0] || {w:0, bf:0}, initial = metrics[metrics.length - 1] || {w:0, bf:0};
-                const uniqueDays = [...new Set(workouts.map(w => w.date))];
-                return { w: latest.w, bf: latest.bf, wD: (initial.w - latest.w).toFixed(1), bfD: (initial.bf - latest.bf).toFixed(1), s: uniqueDays.length };
+                return { w: latest.w, bf: latest.bf, s: [...new Set(workouts.map(w => w.date))].length };
             })();
 
-            if (loading) return h('div', {className: 'h-screen flex items-center justify-center bg-[#020617]'}, h('div', {className: 'text-center'}, h('i', {className: 'fas fa-cloud text-blue-500 text-5xl mb-4 loading-pulse'}), h('p', {className: 'text-xs font-black uppercase tracking-widest text-slate-500'}, "Fetching Scientific Data...")));
+            // Find the most recent workout entry for the current active type
+            const prevSession = workouts.find(w => w.type === activeWkt);
+
+            if (loading) return h('div', {className: 'h-screen flex items-center justify-center bg-[#020617] text-blue-500'}, h('i', {className: 'fas fa-dna text-5xl animate-spin'}));
 
             return h('div', { className: 'max-w-md mx-auto p-4' },
                 h('div', { className: 'text-center py-6' },
                     h('h1', { className: 'text-4xl font-black italic accent-text' }, 'PHASE 15'),
-                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-widest' }, 'Cloud Sync: Active')
+                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-widest' }, 'Progressive Overload Active')
                 ),
 
                 h('div', { className: 'flex mb-6 glass rounded-xl overflow-hidden' },
-                    ['dashboard', 'plan', 'history', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
+                    ['dashboard', 'plan', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
                 ),
 
                 tab === 'dashboard' && h('div', { className: 'space-y-4' },
@@ -108,13 +99,7 @@
                             h('div', { key: s.l, className: 'glass p-3 rounded-xl text-center' }, h('i', { className: `fas ${s.i} ${s.c} text-[10px] mb-1` }), h('p', { className: 'text-[8px] uppercase font-bold text-slate-500' }, s.l), h('p', { className: 'text-sm font-black' }, s.v))
                         )
                     ),
-                    h('div', { className: 'glass p-6 rounded-3xl border-l-4 border-blue-500' },
-                        h('p', { className: 'text-[10px] font-black text-slate-500 uppercase mb-2' }, 'Recomp Progress'),
-                        h('div', { className: 'flex justify-between' },
-                            h('div', null, h('p', { className: 'text-2xl font-black text-emerald-400' }, stats.bfD, '%'), h('p', { className: 'text-[9px] uppercase font-bold text-slate-500' }, 'Fat Reduction')),
-                            h('div', { className: 'text-right' }, h('p', { className: 'text-2xl font-black text-blue-400' }, stats.wD, ' lbs'), h('p', { className: 'text-[9px] uppercase font-bold text-slate-500' }, 'Weight Shift'))
-                        )
-                    )
+                    h('button', { onClick: () => setTab('plan'), className: 'w-full bg-blue-600 p-5 rounded-2xl font-black uppercase text-sm' }, 'View Training Plan')
                 ),
 
                 tab === 'plan' && h('div', { className: 'space-y-3' },
@@ -127,8 +112,13 @@
                     })
                 ),
 
-                tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-10' },
-                    h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
+                tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-20' },
+                    h('div', { className: 'flex justify-between items-end' },
+                        h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
+                        h('button', { onClick: () => setActiveWkt(null), className: 'text-[10px] text-slate-500 font-bold uppercase underline' }, 'Cancel')
+                    ),
+                    
+                    // The Logging Zone
                     exData.map((ex, i) => h('div', { key: i, className: 'glass p-4 rounded-2xl' },
                         h('div', { className: 'flex justify-between mb-3 font-black uppercase text-[10px]' }, h('p', {className:'text-slate-300'}, ex.name), h('span', {className:'text-blue-500'}, 'Aim: '+ex.target)),
                         ex.sets.map((set, si) => h('div', { key: si, className: 'flex gap-2 mb-2' },
@@ -136,18 +126,22 @@
                             h('input', { placeholder: 'REPS', type: 'number', className: 'input-box flex-1', value: set.r, onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; setExData(n); }})
                         ))
                     )),
-                    h('button', { onClick: saveWkt, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase' }, 'Sync Workout')
-                ) : h('p', { className: 'text-center py-20 text-slate-500 italic' }, "Start from PLAN.")),
 
-                tab === 'history' && h('div', { className: 'space-y-4 pb-20' },
-                    workouts.map((w, i) => h('div', { key: i, className: 'glass p-5 rounded-2xl border-l-4 border-blue-600' },
-                        h('div', { className: 'flex justify-between mb-3' }, h('span', { className: 'font-black text-blue-400 text-xs uppercase' }, w.type), h('span', { className: 'text-[10px] text-slate-500 font-bold' }, w.date)),
-                        h('pre', { className: 'text-[11px] text-slate-300 font-sans leading-relaxed' }, w.content)
-                    ))
-                ),
+                    // NEW: Previous Session Display directly in the workout tab
+                    prevSession && h('div', { className: 'history-card p-6 rounded-3xl mt-8' },
+                        h('div', { className: 'flex items-center gap-2 mb-4' },
+                            h('i', { className: 'fas fa-clock-rotate-left text-blue-500 text-xs' }),
+                            h('p', { className: 'text-[10px] font-black uppercase tracking-widest text-blue-400' }, 'Last Session: ', prevSession.date)
+                        ),
+                        h('pre', { className: 'text-[11px] text-slate-400 font-sans leading-relaxed whitespace-pre-line' }, prevSession.content)
+                    ),
+
+                    h('button', { onClick: saveWkt, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase shadow-lg shadow-blue-900/40 sticky bottom-4' }, 'Complete & Sync')
+                ) : null),
 
                 tab === 'metrics' && h('div', { className: 'space-y-6 pb-20' },
                     h('div', { className: 'glass p-6 rounded-3xl space-y-4' },
+                        h('p', { className: 'text-xs font-black text-slate-500 uppercase text-center' }, 'Update Vitals'),
                         h('div', { className: 'flex gap-2' },
                             h('input', { id: 'w-val', type: 'number', placeholder: 'Weight', className: 'input-box flex-1' }),
                             h('input', { id: 'bf-val', type: 'number', placeholder: 'BF %', className: 'input-box flex-1' })
