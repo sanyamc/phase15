@@ -35,36 +35,61 @@
             const [showMilestone, setShowMilestone] = useState(null);
 
             const milestones = {
-                7: { title: "Foundation Set", msg: "Neuro-muscular adaptation has begun. Your brain is learning to recruit muscle fibers.", icon: "fa-seedling" },
-                21: { title: "Habit Locked", msg: "Automation complete. You are no longer trying; you are becoming.", icon: "fa-anchor" },
-                50: { title: "Metabolic Shift", msg: "Mitochondrial density increased. Your body is a fat-burning machine.", icon: "fa-fire-alt" },
-                100: { title: "Elite Recomp", msg: "Transformation complete. You've reached the top 5% of consistency.", icon: "fa-crown" }
+                7: { title: "Foundation Set", msg: "Neuro-muscular adaptation: Your brain is mastering motor unit recruitment.", icon: "fa-seedling" },
+                21: { title: "Habit Locked", msg: "Automation phase complete. The friction of starting has officially vanished.", icon: "fa-anchor" },
+                50: { title: "Metabolic Shift", msg: "Mitochondrial biogenesis: Your body is now a more efficient engine.", icon: "fa-fire-alt" },
+                100: { title: "Elite Recomp", msg: "Transformation complete. You have reached the pinnacle of discipline.", icon: "fa-crown" }
             };
 
+            // SCIENTIFIC TEMPLATES UPDATED
             const templates = {
-                'Upper Push (Hypertrophy)': [{n: 'Incline DB Press', s: 3, r: '8-10'}, {n: 'Overhead Press', s: 3, r: '8-10'}, {n: 'Lateral Raises', s: 3, r: '12-15'}],
-                'Upper Pull (Strength)': [{n: 'Weighted Pull Ups', s: 3, r: '6-8'}, {n: 'Barbell Rows', s: 3, r: '8-10'}, {n: 'Hammer Curls', s: 3, r: '10-12'}],
-                'Lower Quad (Endurance)': [{n: 'Back Squat', s: 4, r: '8-10'}, {n: 'Bulgarian Split Squat', s: 3, r: '10-12'}, {n: 'Calf Raises', s: 4, r: '15-20'}],
-                'Lower Ham (Power)': [{n: 'Deadlift', s: 3, r: '5-8'}, {n: 'Romanian Deadlift', s: 3, r: '10-12'}, {n: 'Leg Curls', s: 3, r: '12-15'}],
-                'Half-Marathon Prep': [{n: 'Zone 2 Foundation Run', s: 1, r: '45 min'}, {n: 'Speed Intervals', s: 6, r: '400m'}]
+                'Upper Push (Hypertrophy)': [
+                    {n: 'Incline DB Press', s: 3, r: '8-10'},
+                    {n: 'Dips (Chest Focused)', s: 3, r: '10-12'},
+                    {n: 'Overhead Press', s: 3, r: '8-10'},
+                    {n: 'Lateral Raises', s: 3, r: '12-15'}
+                ],
+                'Upper Pull (Strength)': [
+                    {n: 'Chin-Ups (Weighted)', s: 3, r: '6-8'},
+                    {n: 'Barbell Rows', s: 3, r: '8-10'},
+                    {n: 'Preacher Curls', s: 3, r: '10-12'},
+                    {n: 'Face Pulls', s: 3, r: '15-20'}
+                ],
+                'Lower Quad (Endurance)': [
+                    {n: 'Back Squat', s: 4, r: '8-10'},
+                    {n: 'Leg Press', s: 3, r: '12-15'},
+                    {n: 'Bulgarian Split Squat', s: 3, r: '10-12'},
+                    {n: 'Calf Raises', s: 4, r: '15-20'}
+                ],
+                'Lower Ham (Power)': [
+                    {n: 'Deadlift', s: 3, r: '5-8'},
+                    {n: 'Romanian Deadlift', s: 3, r: '10-12'},
+                    {n: 'Leg Curls', s: 3, r: '12-15'},
+                    {n: 'Hanging Leg Raises', s: 3, r: '15-20'}
+                ],
+                'Half-Marathon Prep': [
+                    {n: 'Zone 2 Foundation Run', s: 1, r: '45 min'},
+                    {n: 'Speed Intervals', s: 6, r: '400m'}
+                ]
             };
 
             useEffect(() => {
-                const w = JSON.parse(localStorage.getItem('p15_w_v7') || '[]');
-                const m = JSON.parse(localStorage.getItem('p15_m_v7') || '[]');
+                const w = JSON.parse(localStorage.getItem('p15_w_v8') || '[]');
+                const m = JSON.parse(localStorage.getItem('p15_m_v8') || '[]');
                 setWorkouts(w);
                 setMetrics(m);
             }, []);
 
             const saveWkt = () => {
-                const text = exData.map(e => `${e.name}\n${e.sets.map((s,i) => `S${i+1}: ${s.w}lb x ${s.r}`).join(' | ')}`).join('\n\n');
+                const text = exData.map(e => `${e.name}\n${e.sets.map((s,i) => `S${i+1}: ${s.w || '0'}lb x ${s.r || '0'}`).join(' | ')}`).join('\n\n');
                 const log = { type: activeWkt, date: new Date().toLocaleDateString(), content: text };
                 const updated = [log, ...workouts];
                 const streak = [...new Set(updated.map(w => w.date))].length;
                 if (milestones[streak]) setShowMilestone(streak);
                 setWorkouts(updated);
-                localStorage.setItem('p15_w_v7', JSON.stringify(updated));
+                localStorage.setItem('p15_w_v8', JSON.stringify(updated));
                 setActiveWkt(null); setTab('history');
+                if(SCRIPT_URL.includes('http')) fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'lift', ...log}) });
             };
 
             const saveMetric = () => {
@@ -72,7 +97,7 @@
                 if(!w && !bf) return;
                 const newM = [{w: parseFloat(w)||0, bf: parseFloat(bf)||0, date:new Date().toLocaleDateString()}, ...metrics];
                 setMetrics(newM);
-                localStorage.setItem('p15_m_v7', JSON.stringify(newM));
+                localStorage.setItem('p15_m_v8', JSON.stringify(newM));
                 document.getElementById('w-val').value = ''; document.getElementById('bf-val').value = '';
             };
 
@@ -83,7 +108,7 @@
             })();
 
             return h('div', { className: 'max-w-md mx-auto p-4' },
-                showMilestone && h('div', { className: 'fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-6 text-center', onClick: () => setShowMilestone(null) },
+                showMilestone && h('div', { className: 'fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center p-6 text-center', onClick: () => setShowMilestone(null) },
                     h('div', { className: 'glass p-8 rounded-3xl border-2 border-blue-500' },
                         h('i', { className: `fas ${milestones[showMilestone].icon} text-6xl text-blue-500 mb-4 streak-fire` }),
                         h('h2', { className: 'text-2xl font-black mb-2' }, milestones[showMilestone].title),
@@ -122,11 +147,11 @@
                     exData.map((ex, i) => h('div', { key: i, className: 'glass p-4 rounded-2xl' },
                         h('div', { className: 'flex justify-between mb-3 font-black uppercase text-[10px]' }, h('p', {className:'text-slate-300'}, ex.name), h('span', {className:'text-blue-500'}, 'Aim: '+ex.target)),
                         ex.sets.map((set, si) => h('div', { key: si, className: 'flex gap-2 mb-2' },
-                            h('input', { placeholder: 'LBS', type: 'number', className: 'input-box flex-1', onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], w: e.target.value}; setExData(n); }}),
-                            h('input', { placeholder: 'REPS', type: 'number', className: 'input-box flex-1', onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; setExData(n); }})
+                            h('input', { placeholder: 'LBS', type: 'number', className: 'input-box flex-1', value: set.w, onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], w: e.target.value}; setExData(n); }}),
+                            h('input', { placeholder: 'REPS', type: 'number', className: 'input-box flex-1', value: set.r, onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; setExData(n); }})
                         ))
                     )),
-                    h('button', { onClick: saveWkt, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase' }, 'Complete Session')
+                    h('button', { onClick: saveWkt, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase' }, 'Save Session')
                 ) : h('p', { className: 'text-center py-20 text-slate-500 italic' }, "Start from PLAN tab.")),
 
                 tab === 'history' && h('div', { className: 'space-y-4' },
