@@ -28,47 +28,70 @@
         .accent-text { background: linear-gradient(135deg, #60a5fa 0%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .progress-ring { transform: rotate(-90deg); }
         .progress-ring__circle { transition: stroke-dashoffset 0.4s ease; stroke: #3b82f6; }
+        pre { white-space: pre-wrap; word-wrap: break-word; font-family: 'Inter', sans-serif; }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script>
+        const SCRIPT_URL = 'PASTE_YOUR_URL_HERE';
+
         window.addEventListener('load', function() {
             const { createElement: h, useState, useEffect } = React;
 
             function App() {
                 const [tab, setTab] = useState('dashboard');
-                const [workouts, setWorkouts] = useState([
-                    { type: 'Upper Pull', date: 'Jan 1', content: 'Chin-Ups: 45lb x 8 | 45lb x 7\nRows: 135lb x 10' }
-                ]);
+                const [workouts, setWorkouts] = useState([]);
+                const [metrics, setMetrics] = useState([]);
                 const [consumed, setConsumed] = useState({ p: 0, c: 0, f: 0 });
-                const [weight, setWeight] = useState(130);
+                const [loading, setLoading] = useState(true);
                 const [activeWkt, setActiveWkt] = useState(null);
                 const [exData, setExData] = useState([]);
 
-                const proteinGoal = Math.round(weight * 0.8);
+                const templates = {
+                    'Upper Push (Hypertrophy)': [{n: 'Incline DB Press', s: 3, r: '8-10'}, {n: 'Dips', s: 3, r: '10-12'}, {n: 'Lateral Raises', s: 3, r: '12-15'}],
+                    'Upper Pull (Strength)': [{n: 'Chin-Ups (Weighted)', s: 3, r: '6-8'}, {n: 'Barbell Rows', s: 3, r: '8-10'}, {n: 'Face Pulls', s: 3, r: '15-20'}],
+                    'Lower Quad (Endurance)': [{n: 'Back Squat', s: 4, r: '8-10'}, {n: 'Leg Press', s: 3, r: '12-15'}],
+                    'Lower Ham (Power)': [{n: 'Deadlift', s: 3, r: '5-8'}, {n: 'Romanian Deadlift', s: 3, r: '10-12'}],
+                    'Half-Marathon Prep': [{n: 'Zone 2 Run', s: 1, r: '45 min'}]
+                };
+
+                useEffect(() => {
+                    fetch(SCRIPT_URL).then(r => r.json()).then(data => {
+                        setWorkouts(data.workouts || []);
+                        setMetrics(data.metrics || []);
+                        setLoading(false);
+                    }).catch(e => setLoading(false));
+                }, []);
+
+                const currentWeight = metrics[0]?.w || 130;
+                const proteinGoal = Math.round(currentWeight * 0.8);
                 const pPct = Math.min((consumed.p / proteinGoal) * 100, 100);
                 const circ = 2 * Math.PI * 40;
                 const offset = circ - (pPct / 100) * circ;
 
-                const saveWkt = () => {
+                const handleSave = async () => {
                     const text = exData.map(e => `${e.name}\n${e.sets.map((s,i) => `S${i+1}: ${s.w||0}lb x ${s.r||0}`).join(' | ')}`).join('\n\n');
-                    setWorkouts([{ type: activeWkt, date: new Date().toLocaleDateString('en-US', {month:'short', day:'numeric'}), content: text }, ...workouts]);
-                    setActiveWkt(null); setTab('dashboard');
+                    const payload = { type: 'workout', data: { type: activeWkt, content: text, date: new Date().toLocaleDateString() } };
+                    
+                    setLoading(true);
+                    await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+                    window.location.reload();
                 };
+
+                if (loading) return h('div', {className:'h-screen flex items-center justify-center'}, h('i', {className:'fas fa-dna text-4xl text-blue-500 animate-pulse'}));
 
                 return h('div', { className: 'app-container max-w-md mx-auto p-5 pb-10' },
                     h('div', { className: 'text-center py-6' },
                         h('h1', { className: 'text-5xl font-black italic accent-text' }, 'PHASE 15'),
-                        h('p', { className: 'text-[9px] text-slate-500 font-bold uppercase tracking-[4px] mt-1' }, 'Science-Driven Recomp')
+                        h('p', { className: 'text-[9px] text-slate-500 font-bold uppercase tracking-[4px] mt-1' }, 'Elite Recomp Protocol')
                     ),
 
                     h('div', { className: 'flex mb-6 glass-strong rounded-2xl overflow-hidden' },
-                        ['dashboard', 'plan', 'fuel', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
+                        ['dashboard', 'plan', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
                     ),
 
                     tab === 'dashboard' && h('div', { className: 'space-y-4' },
-                        // Protein Ring
                         h('div', { className: 'glass-strong p-8 rounded-3xl flex flex-col items-center relative' },
                             h('svg', { className: 'progress-ring', width: '120', height: '120' },
                                 h('circle', { className: 'text-slate-800', strokeWidth: '8', stroke: 'currentColor', fill: 'transparent', r: '40', cx: '60', cy: '60' }),
@@ -78,13 +101,12 @@
                                 h('p', { className: 'text-2xl font-black' }, Math.round(pPct), '%'),
                                 h('p', { className: 'text-[8px] uppercase font-bold text-slate-500' }, 'Protein')
                             ),
-                            h('p', { className: 'mt-4 text-xs font-bold text-blue-400' }, consumed.p, ' / ', proteinGoal, 'g (0.8x BW)')
+                            h('p', { className: 'mt-4 text-xs font-bold text-blue-400' }, consumed.p, ' / ', proteinGoal, 'g (0.8x BW Target)')
                         ),
 
-                        // Stats Grid
                         h('div', { className: 'grid grid-cols-2 gap-3' },
                             h('div', { className: 'glass-strong p-5 rounded-2xl text-center' },
-                                h('p', { className: 'text-[10px] uppercase font-bold text-slate-500 mb-1' }, 'Workout Streak'),
+                                h('p', { className: 'text-[10px] uppercase font-bold text-slate-500 mb-1' }, 'Current Streak'),
                                 h('p', { className: 'text-2xl font-black text-orange-500' }, '🔥 12 Days')
                             ),
                             h('div', { className: 'glass-strong p-5 rounded-2xl text-center' },
@@ -93,48 +115,26 @@
                             )
                         ),
 
-                        // Recent History
                         h('div', { className: 'glass-strong p-5 rounded-2xl' },
-                            h('div', { className: 'flex justify-between items-center mb-4' },
-                                h('h3', { className: 'text-xs font-black uppercase text-slate-400' }, 'Recent Training History'),
-                                h('i', { className: 'fas fa-history text-slate-600' })
-                            ),
-                            workouts.map((w, i) => h('div', { key: i, className: 'mb-4 last:mb-0 border-l-2 border-blue-500/30 pl-4 py-1' },
+                            h('h3', { className: 'text-xs font-black uppercase text-slate-400 mb-4' }, 'Recent Workouts'),
+                            workouts.slice(0, 3).map((w, i) => h('div', { key: i, className: 'mb-4 last:mb-0 border-l-2 border-blue-500/30 pl-4' },
                                 h('div', { className: 'flex justify-between text-[11px] mb-1' },
                                     h('span', { className: 'font-black text-blue-400 uppercase' }, w.type),
                                     h('span', { className: 'text-slate-500 font-bold' }, w.date)
                                 ),
-                                h('pre', { className: 'text-[10px] text-slate-300 font-medium leading-relaxed whitespace-pre-wrap' }, w.content)
+                                h('pre', { className: 'text-[10px] text-slate-300' }, w.content)
                             ))
                         )
                     ),
 
-                    tab === 'fuel' && h('div', { className: 'glass-strong p-6 rounded-3xl space-y-4' },
-                        h('p', { className: 'text-center text-[10px] font-black uppercase text-blue-400' }, 'Fuel Intake (g)'),
-                        h('div', { className: 'grid grid-cols-3 gap-3' },
-                            ['p', 'c', 'f'].map(k => h('input', { id: `in-${k}`, type: 'number', placeholder: k.toUpperCase(), className: 'input-box' }))
-                        ),
-                        h('button', { 
-                            onClick: () => {
-                                setConsumed(prev => ({
-                                    p: prev.p + parseInt(document.getElementById('in-p').value || 0),
-                                    c: prev.c + parseInt(document.getElementById('in-c').value || 0),
-                                    f: prev.f + parseInt(document.getElementById('in-f').value || 0)
-                                }));
-                                ['p','c','f'].forEach(k => document.getElementById(`in-${k}`).value = '');
-                            },
-                            className: 'w-full bg-blue-600 p-4 rounded-xl font-black uppercase text-xs' 
-                        }, 'Sync Intake')
-                    ),
-
                     tab === 'plan' && h('div', { className: 'space-y-3' },
-                        Object.keys({ 'Upper Push (Hypertrophy)':1, 'Half-Marathon Prep':1, 'Lower Quad (Endurance)':1, 'Upper Pull (Strength)':1, 'Lower Ham (Power)':1 }).map(p => 
+                        Object.keys(templates).map(p => 
                             h('div', { key: p, className: 'glass-strong p-5 rounded-2xl flex justify-between items-center' },
                                 h('p', { className: 'text-sm font-black' }, p),
                                 h('button', { 
                                     onClick: () => { 
                                         setActiveWkt(p); 
-                                        setExData([{name: 'First Exercise', sets: [{w:'', r:''}]}]); 
+                                        setExData(templates[p].map(e => ({ name: e.n, sets: Array(e.s).fill({w:'', r:''}) }))); 
                                         setTab('workout'); 
                                     },
                                     className: 'bg-blue-600 px-4 py-2 rounded-lg font-black text-[10px]' 
@@ -143,21 +143,29 @@
                         )
                     ),
 
-                    tab === 'workout' && h('div', { className: 'space-y-4' },
+                    tab === 'workout' && h('div', { className: 'space-y-4 pb-10' },
                         h('h2', { className: 'text-xl font-black italic' }, activeWkt),
                         exData.map((ex, i) => h('div', { key: i, className: 'glass-strong p-4 rounded-2xl' },
-                            h('input', { className: 'bg-transparent text-sm font-bold mb-3 w-full border-b border-blue-500/20', value: ex.name, onChange: (e) => { const n = [...exData]; n[i].name = e.target.value; setExData(n); }}),
+                            h('p', { className: 'text-sm font-bold text-blue-400 mb-3' }, ex.name),
                             ex.sets.map((s, si) => h('div', { key: si, className: 'flex gap-2 mb-2' },
-                                h('input', { placeholder: 'Lbs', type: 'number', className: 'input-box flex-1', value: s.w, onChange: (e) => { const n = [...exData]; n[i].sets[si].w = e.target.value; setExData(n); }}),
-                                h('input', { placeholder: 'Reps', type: 'number', className: 'input-box flex-1', value: s.r, onChange: (e) => { const n = [...exData]; n[i].sets[si].r = e.target.value; setExData(n); }})
+                                h('input', { placeholder: 'Lbs', type: 'number', className: 'input-box flex-1', onChange: (e) => { const n = [...exData]; n[i].sets[si].w = e.target.value; setExData(n); }}),
+                                h('input', { placeholder: 'Reps', type: 'number', className: 'input-box flex-1', onChange: (e) => { const n = [...exData]; n[i].sets[si].r = e.target.value; setExData(n); }})
                             ))
                         )),
-                        h('button', { onClick: saveWkt, className: 'w-full bg-emerald-600 p-5 rounded-2xl font-black uppercase text-xs' }, 'Complete Workout')
+                        h('button', { onClick: handleSave, className: 'w-full bg-emerald-600 p-5 rounded-2xl font-black uppercase text-xs' }, 'Sync to Sheet')
                     ),
 
                     tab === 'metrics' && h('div', { className: 'glass-strong p-6 rounded-3xl' },
-                        h('label', { className: 'text-[10px] font-bold text-slate-500 uppercase block mb-2' }, 'Current Weight (Lbs)'),
-                        h('input', { type: 'number', value: weight, onChange: (e) => setWeight(e.target.value), className: 'input-box mb-4' })
+                        h('p', { className: 'text-[10px] font-bold text-slate-500 uppercase mb-2' }, 'Log Bodyweight'),
+                        h('input', { id: 'wt-val', type: 'number', placeholder: currentWeight, className: 'input-box mb-4' }),
+                        h('button', { 
+                            onClick: () => {
+                                const val = document.getElementById('wt-val').value;
+                                fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ type: 'metric', data: { w: val, date: new Date().toLocaleDateString() } }) })
+                                .then(() => window.location.reload());
+                            },
+                            className: 'w-full bg-blue-600 p-4 rounded-xl font-black text-xs' 
+                        }, 'Save Metric')
                     )
                 );
             }
