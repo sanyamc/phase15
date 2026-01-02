@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PHASE 15 | Scientific Recomp</title>
+    <title>PHASE 15 | RECOMP ELITE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -12,9 +12,11 @@
         body { font-family: 'Inter', sans-serif; background: #020617; color: white; margin: 0; }
         .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
         .input-box { background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; padding: 10px; width: 100%; text-align: center; font-weight: bold; font-size: 14px; }
-        .tab-btn { flex: 1; padding: 14px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #475569; border-bottom: 2px solid transparent; }
+        .tab-btn { flex: 1; padding: 14px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #475569; border-bottom: 2px solid transparent; }
         .tab-active { color: #3b82f6; border-bottom: 2px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
         .accent-text { background: linear-gradient(to right, #60a5fa, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .day-card { border-left: 3px solid #334155; transition: 0.3s; }
+        .day-active { border-left: 3px solid #3b82f6; background: rgba(59, 130, 246, 0.1); }
     </style>
 </head>
 <body>
@@ -26,58 +28,45 @@
         function App() {
             const [tab, setTab] = useState('history');
             const [workouts, setWorkouts] = useState([]);
-            const [metrics, setMetrics] = useState([]);
+            const [metrics, setMetrics] = useState([]); // [{w: 180, bf: 25, date: ''}]
             const [activeWkt, setActiveWkt] = useState(null);
             const [exData, setExData] = useState([]);
-            const [status, setStatus] = useState('');
 
-            // Scientific Workout Templates
+            const weeklyPlan = [
+                { d: 'Monday', t: 'Upper Push (Hypertrophy)', i: 'fa-dumbbell' },
+                { d: 'Tuesday', t: 'Half-Marathon Prep', i: 'fa-person-running' },
+                { d: 'Wednesday', t: 'Lower Quad (Endurance)', i: 'fa-leg-action' },
+                { d: 'Thursday', t: 'Upper Pull (Strength)', i: 'fa-weight-hanging' },
+                { d: 'Friday', t: 'Lower Ham (Power)', i: 'fa-bolt' },
+                { d: 'Saturday', t: 'Half-Marathon Prep', i: 'fa-route' },
+                { d: 'Sunday', t: 'Rest & Recovery', i: 'fa-bed' }
+            ];
+
             const templates = {
-                'Upper Push (Hypertrophy)': [
-                    {n: 'Incline DB Press', s: 3, r: '8-10'},
-                    {n: 'Overhead Press', s: 3, r: '8-10'},
-                    {n: 'Lateral Raises', s: 3, r: '12-15'},
-                    {n: 'Tricep Pushdowns', s: 3, r: '10-12'}
-                ],
-                'Upper Pull (Strength)': [
-                    {n: 'Weighted Pull Ups', s: 3, r: '6-8'},
-                    {n: 'Barbell Rows', s: 3, r: '8-10'},
-                    {n: 'Face Pulls', s: 3, r: '15-20'},
-                    {n: 'Hammer Curls', s: 3, r: '10-12'}
-                ],
-                'Lower Quad (Endurance)': [
-                    {n: 'Back Squat', s: 4, r: '8-10'},
-                    {n: 'Bulgarian Split Squat', s: 3, r: '10-12'},
-                    {n: 'Leg Extensions', s: 3, r: '12-15'},
-                    {n: 'Calf Raises', s: 4, r: '15-20'}
-                ],
-                'Lower Ham (Power)': [
-                    {n: 'Deadlift', s: 3, r: '5-8'},
-                    {n: 'Romanian Deadlift', s: 3, r: '10-12'},
-                    {n: 'Leg Curls', s: 3, r: '12-15'},
-                    {n: 'Core/Plank', s: 3, r: '60s'}
-                ],
-                'Half-Marathon Prep': [
-                    {n: 'Zone 2 Foundation Run', s: 1, r: '45 min'},
-                    {n: 'Speed Intervals', s: 6, r: '400m'}
-                ]
+                'Upper Push (Hypertrophy)': [{n: 'Incline DB Press', s: 3, r: '8-10'}, {n: 'Overhead Press', s: 3, r: '8-10'}, {n: 'Lateral Raises', s: 3, r: '12-15'}],
+                'Upper Pull (Strength)': [{n: 'Weighted Pull Ups', s: 3, r: '6-8'}, {n: 'Barbell Rows', s: 3, r: '8-10'}, {n: 'Hammer Curls', s: 3, r: '10-12'}],
+                'Lower Quad (Endurance)': [{n: 'Back Squat', s: 4, r: '8-10'}, {n: 'Bulgarian Split Squat', s: 3, r: '10-12'}, {n: 'Calf Raises', s: 4, r: '15-20'}],
+                'Lower Ham (Power)': [{n: 'Deadlift', s: 3, r: '5-8'}, {n: 'Romanian Deadlift', s: 3, r: '10-12'}, {n: 'Leg Curls', s: 3, r: '12-15'}],
+                'Half-Marathon Prep': [{n: 'Zone 2 Foundation Run', s: 1, r: '45 min'}, {n: 'Speed Intervals', s: 6, r: '400m'}]
             };
 
             useEffect(() => {
-                const w = localStorage.getItem('p15_w_v2');
-                const m = localStorage.getItem('p15_m_v2');
+                const w = localStorage.getItem('p15_w_v4');
+                const m = localStorage.getItem('p15_m_v4');
                 if (w) setWorkouts(JSON.parse(w));
                 if (m) setMetrics(JSON.parse(m));
             }, []);
 
             useEffect(() => {
-                localStorage.setItem('p15_w_v2', JSON.stringify(workouts));
-                localStorage.setItem('p15_m_v2', JSON.stringify(metrics));
+                localStorage.setItem('p15_w_v4', JSON.stringify(workouts));
+                localStorage.setItem('p15_m_v4', JSON.stringify(metrics));
             }, [workouts, metrics]);
 
             const start = (t) => {
+                if (!templates[t]) return;
                 setActiveWkt(t);
                 setExData(templates[t].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({w:'', r:''}) })));
+                setTab('workout');
             };
 
             const save = () => {
@@ -86,101 +75,91 @@
                 setWorkouts([log, ...workouts]);
                 setActiveWkt(null);
                 setTab('history');
-                if(SCRIPT_URL.includes('http')) {
-                    fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'lift', ...log}) });
-                }
+                if(SCRIPT_URL.includes('http')) fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'lift', ...log}) });
             };
 
-            const calculateStats = () => {
-                const current = metrics.length > 0 ? parseFloat(metrics[0].value) : 0;
-                const startWeight = metrics.length > 0 ? parseFloat(metrics[metrics.length - 1].value) : 0;
-                const weightDrop = (startWeight - current).toFixed(1);
-                const streak = [...new Set(workouts.map(w => w.date))].length;
-                return { current, weightDrop, streak, total: workouts.length };
-            };
+            const stats = (() => {
+                const latest = metrics.length > 0 ? metrics[0] : {w:0, bf:0};
+                const initial = metrics.length > 0 ? metrics[metrics.length - 1] : {w:0, bf:0};
+                return { 
+                    w: latest.w || '--', 
+                    bf: latest.bf || '--',
+                    wDrop: (initial.w - latest.w).toFixed(1),
+                    bfDrop: (initial.bf - latest.bf).toFixed(1),
+                    streak: [...new Set(workouts.map(w => w.date))].length 
+                };
+            })();
 
-            const stats = calculateStats();
+            const todayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date());
 
             return h('div', { className: 'max-w-md mx-auto p-4' },
                 h('div', { className: 'text-center py-6' },
-                    h('h1', { className: 'text-4xl font-black italic accent-text' }, 'PHASE 15'),
-                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]' }, '31% → 15% Recomp')
+                    h('h1', { className: 'text-4xl font-black italic accent-text leading-tight' }, 'PHASE 15'),
+                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]' }, 'Protocol: 31% → 15%')
                 ),
 
                 // DASHBOARD
                 tab === 'history' && h('div', { className: 'grid grid-cols-2 gap-3 mb-6' },
-                    [{l:'Streak', v:stats.streak, i:'fa-fire', c:'text-orange-500'},
-                     {l:'Workouts', v:stats.total, i:'fa-dumbbell', c:'text-blue-500'},
-                     {l:'Weight Drop', v:stats.weightDrop+' lbs', i:'fa-chart-line', c:'text-emerald-500'},
-                     {l:'Current', v:stats.current+' lbs', i:'fa-weight', c:'text-purple-500'}].map(s => 
-                        h('div', { key: s.l, className: 'glass p-4 rounded-2xl' },
-                            h('i', { className: `fas ${s.i} ${s.c} text-xs mb-1` }),
-                            h('p', { className: 'text-[9px] uppercase font-bold text-slate-500' }, s.l),
-                            h('p', { className: 'text-xl font-black' }, s.v)
-                        )
+                    [{l:'Weight', v:stats.w + ' lbs', i:'fa-weight-scale', c:'text-blue-500'}, 
+                     {l:'Body Fat', v:stats.bf + '%', i:'fa-percent', c:'text-emerald-500'},
+                     {l:'W-Loss', v:stats.wDrop + ' lbs', i:'fa-arrow-down', c:'text-blue-400'},
+                     {l:'BF-Drop', v:stats.bfDrop + '%', i:'fa-droplet-slash', c:'text-emerald-400'}].map(s => 
+                        h('div', { key: s.l, className: 'glass p-4 rounded-2xl' }, h('i', { className: `fas ${s.i} ${s.c} text-xs mb-1` }), h('p', { className: 'text-[9px] uppercase font-bold text-slate-500' }, s.l), h('p', { className: 'text-lg font-black' }, s.v))
                     )
                 ),
 
                 // NAV
                 h('div', { className: 'flex mb-6 glass rounded-xl overflow-hidden' },
-                    ['history', 'workout', 'metrics'].map(t => 
-                        h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t)
-                    )
+                    ['history', 'plan', 'workout', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
+                ),
+
+                // PLAN VIEW
+                tab === 'plan' && h('div', { className: 'space-y-3' },
+                    weeklyPlan.map(day => h('div', { key: day.d, className: `glass p-4 rounded-2xl flex justify-between items-center day-card ${todayName === day.d ? 'day-active' : ''}` },
+                        h('div', null, h('p', { className: 'text-[10px] font-bold text-slate-500 uppercase' }, day.d), h('p', { className: 'text-sm font-black' }, day.t)),
+                        day.t !== 'Rest & Recovery' && h('button', { onClick: () => start(day.t), className: 'text-[10px] bg-blue-600 px-3 py-1.5 rounded-lg font-black' }, 'START')
+                    ))
                 ),
 
                 // WORKOUT VIEW
-                tab === 'workout' && (
-                    !activeWkt ? h('div', { className: 'space-y-3' },
-                        Object.keys(templates).map(t => h('button', { key: t, onClick: () => start(t), className: 'glass p-5 w-full text-left rounded-2xl font-bold border-l-4 border-blue-500 flex justify-between items-center' }, t, h('i', {className:'fas fa-chevron-right text-slate-600 text-xs'})))
-                    ) : h('div', { className: 'space-y-4 pb-10' },
-                        h('div', { className: 'flex justify-between items-center' },
-                            h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
-                            h('button', { onClick: () => setActiveWkt(null), className: 'text-xs text-slate-500 uppercase font-bold' }, 'Cancel')
-                        ),
+                tab === 'workout' && (!activeWkt ? h('div', { className: 'text-center py-10 text-slate-500 text-sm italic' }, "Select a workout from the Plan tab.") : 
+                    h('div', { className: 'space-y-4 pb-10' },
+                        h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
                         exData.map((ex, i) => h('div', { key: i, className: 'glass p-4 rounded-2xl' },
-                            h('div', { className: 'flex justify-between mb-3' },
-                                h('p', { className: 'text-xs font-black uppercase text-slate-300' }, ex.name),
-                                h('span', { className: 'text-[10px] text-blue-500 font-bold' }, 'Target: ', ex.target)
-                            ),
+                            h('div', { className: 'flex justify-between mb-3' }, h('p', { className: 'text-xs font-black uppercase text-slate-300' }, ex.name), h('span', { className: 'text-[10px] text-blue-500 font-bold' }, 'Target: ', ex.target)),
                             ex.sets.map((set, si) => h('div', { key: si, className: 'flex gap-2 mb-2' },
                                 h('span', { className: 'w-6 text-[10px] text-slate-600 font-bold flex items-center' }, si+1),
-                                h('input', { placeholder: 'Weight', type: 'number', className: 'input-box flex-1', onChange: (e) => {
-                                    const next = [...exData]; next[i].sets[si] = {...next[i].sets[si], w: e.target.value}; setExData(next);
-                                }}),
-                                h('input', { placeholder: 'Reps', type: 'number', className: 'input-box flex-1', onChange: (e) => {
-                                    const next = [...exData]; next[i].sets[si] = {...next[i].sets[si], r: e.target.value}; setExData(next);
-                                }})
+                                h('input', { placeholder: 'LBS', type: 'number', className: 'input-box flex-1', onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], w: e.target.value}; setExData(n); }}),
+                                h('input', { placeholder: 'REPS', type: 'number', className: 'input-box flex-1', onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; setExData(n); }})
                             ))
                         )),
-                        h('button', { onClick: save, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase shadow-lg shadow-blue-900/40' }, 'Sync & Finish')
+                        h('button', { onClick: save, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase' }, 'Sync & Finish')
                     )
                 ),
 
                 // HISTORY VIEW
                 tab === 'history' && h('div', { className: 'space-y-4' },
+                    workouts.length === 0 ? h('p', {className:'text-center text-slate-600 py-10'}, "No logs yet.") :
                     workouts.map((w, i) => h('div', { key: i, className: 'glass p-5 rounded-2xl border-l-4 border-blue-600' },
-                        h('div', { className: 'flex justify-between mb-3' },
-                            h('span', { className: 'font-black text-blue-400 text-xs uppercase' }, w.type),
-                            h('span', { className: 'text-[10px] text-slate-500 font-bold' }, w.date)
-                        ),
+                        h('div', { className: 'flex justify-between mb-3' }, h('span', { className: 'font-black text-blue-400 text-xs uppercase' }, w.type), h('span', { className: 'text-[10px] text-slate-500 font-bold' }, w.date)),
                         h('pre', { className: 'text-[11px] text-slate-300 font-sans leading-relaxed' }, w.content)
                     ))
                 ),
 
                 // METRICS VIEW
-                tab === 'metrics' && h('div', { className: 'glass p-8 rounded-3xl text-center' },
-                    h('i', { className: 'fas fa-weight text-blue-500 text-3xl mb-4' }),
-                    h('p', { className: 'text-xs font-black text-slate-500 uppercase mb-6' }, 'Log Body Metrics'),
-                    h('input', { id: 'w-val', type: 'number', placeholder: 'Current Weight', className: 'input-box text-xl mb-4 h-14' }),
-                    h('button', { onClick: () => {
-                        const v = document.getElementById('w-val').value;
-                        if(v) setMetrics([{type:'weight', value:v, date:new Date().toLocaleDateString()}, ...metrics]);
-                        setTab('history');
-                    }, className: 'w-full bg-emerald-600 p-4 rounded-2xl font-black uppercase' }, 'Update Vitals')
+                tab === 'metrics' && h('div', { className: 'glass p-8 rounded-3xl space-y-4' },
+                    h('div', {className: 'text-center mb-4'}, h('p', { className: 'text-xs font-black text-slate-500 uppercase' }, 'Update Body Composition')),
+                    h('input', { id: 'w-val', type: 'number', placeholder: 'Weight (lbs)', className: 'input-box text-xl h-14' }),
+                    h('input', { id: 'bf-val', type: 'number', placeholder: 'Body Fat %', className: 'input-box text-xl h-14' }),
+                    h('button', { onClick: () => { 
+                        const w = document.getElementById('w-val').value; 
+                        const bf = document.getElementById('bf-val').value;
+                        if(w || bf) setMetrics([{w: parseFloat(w)||0, bf: parseFloat(bf)||0, date:new Date().toLocaleDateString()}, ...metrics]); 
+                        setTab('history'); 
+                    }, className: 'w-full bg-emerald-600 p-4 rounded-2xl font-black uppercase' }, 'Save Vitals')
                 )
             );
         }
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(h(App));
     </script>
