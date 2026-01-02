@@ -157,4 +157,39 @@
                             e('p', { className: 'text-xs font-black uppercase text-emerald-400 mb-3' }, ex.name),
                             ex.sets.map((s, si) => e('div', { key: si, className: 'flex gap-2 mb-2' },
                                 e('input', { type: 'number', placeholder: 'LBS', className: 'input-dark text-xs flex-1', value: s.w, onChange: (v) => updateSet(exIdx, si, 'w', v.target.value) }),
-                                e('input', { type: 'number', placeholder: 'REPS', className: 'input-dark
+                                e('input', { type: 'number', placeholder: 'REPS', className: 'input-dark text-xs flex-1', value: s.r, onChange: (v) => updateSet(exIdx, si, 'r', v.target.value) })
+                            ))
+                        )),
+                        e('button', { onClick: finishWorkout, className: 'w-full bg-blue-600 py-4 rounded-2xl font-black uppercase mt-4' }, 'Complete & Sync')
+                    )
+                )),
+
+                // FUEL
+                activeTab === 'fuel' && e('div', { className: 'glass-card p-6 rounded-3xl space-y-6' },
+                    [{l:'Protein', k:'p', c:'bg-emerald-500', t:targets.p}, {l:'Carbs', k:'c', c:'bg-blue-500', t:targets.c}, {l:'Fats', k:'f', c:'bg-amber-500', t:targets.f}].map(m => e('div', { key: m.k },
+                        e('div', { className: 'flex justify-between text-[10px] font-black uppercase mb-2' }, e('span', null, m.l), e('span', {className:'text-slate-500'}, `${macros[m.k]}g / ${m.t}g`)),
+                        e('div', { className: 'bg-slate-800 h-2 rounded-full mb-3' }, e('div', { className: `progress-fill ${m.c}`, style: { width: `${Math.min((macros[m.k]/m.t)*100, 100)}%` } })),
+                        e('input', { type: 'number', className: 'input-dark text-sm', placeholder: `Add ${m.l}`, value: macros[m.k] || '', onChange: (v) => setMacros({...macros, [m.k]: v.target.value}) })
+                    ))
+                ),
+
+                // METRICS
+                activeTab === 'metrics' && e('div', { className: 'glass-card p-8 rounded-3xl space-y-4 text-center' },
+                    e('p', { className: 'text-[10px] font-black text-slate-500 uppercase' }, 'Update Weight'),
+                    e('input', { id: 'w-in', type: 'number', className: 'input-dark text-2xl font-black', placeholder: '0.0' }),
+                    e('button', { className: 'w-full bg-blue-600 py-4 rounded-2xl font-black uppercase', onClick: () => {
+                        const val = document.getElementById('w-in').value;
+                        if(val) setMetrics([{type:'weight', value: parseFloat(val), date: new Date().toLocaleDateString()}, ...metrics]);
+                        setActiveTab('history');
+                    }}, 'Save Vitals')
+                ),
+
+                status && e('div', { className: 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 px-6 py-2 rounded-full text-[10px] font-black shadow-2xl' }, status)
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('app'));
+        root.render(e(App));
+    </script>
+</body>
+</html>
