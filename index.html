@@ -5,24 +5,225 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PHASE 15 | ELITE TRACKER</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background: #020617; color: white; margin: 0; }
-        .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-        .input-box { background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; padding: 10px; width: 100%; text-align: center; font-weight: bold; }
-        .tab-btn { flex: 1; padding: 14px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #475569; border-bottom: 2px solid transparent; }
-        .tab-active { color: #3b82f6; border-bottom: 2px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
-        .accent-text { background: linear-gradient(to right, #60a5fa, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .history-card { background: rgba(15, 23, 42, 0.8); border-top: 1px solid rgba(59, 130, 246, 0.3); }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1419 100%);
+            color: white; 
+            margin: 0;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .app-container {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .glass { 
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .glass-strong {
+            background: rgba(20, 30, 50, 0.9);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 20px 60px rgba(59, 130, 246, 0.1);
+        }
+        
+        .input-box { 
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            color: white;
+            border-radius: 12px;
+            padding: 14px;
+            width: 100%;
+            text-align: center;
+            font-weight: 700;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .input-box:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: rgba(15, 23, 42, 0.95);
+        }
+        
+        .tab-btn { 
+            flex: 1;
+            padding: 16px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tab-btn:hover {
+            color: #94a3b8;
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .tab-active { 
+            color: #3b82f6;
+            border-bottom: 3px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .accent-text { 
+            background: linear-gradient(135deg, #60a5fa 0%, #34d399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            opacity: 0.5;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .btn-success:hover {
+            box-shadow: 0 12px 40px rgba(16, 185, 129, 0.4);
+        }
+        
+        .day-card {
+            transition: all 0.3s ease;
+        }
+        
+        .day-card:hover {
+            transform: translateX(4px);
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+        
+        .exercise-card {
+            transition: all 0.3s ease;
+            border-left: 3px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .history-card {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%);
+            border-left: 4px solid #3b82f6;
+            animation: slideIn 0.4s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .metric-row {
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.2s ease;
+        }
+        
+        .metric-row:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwA2DHXoElBhy242D5238NMfjS1c49bG2q5bRDjxbmswP1U9grG8PTipS_s6p-LpI7e/exec';
-        const { createElement: h, useState, useEffect } = React;
+        
+        window.addEventListener('load', function() {
+            const React = window.React;
+            const ReactDOM = window.ReactDOM;
+            const { createElement: h, useState, useEffect } = React;
 
         function App() {
             const [tab, setTab] = useState('dashboard');
@@ -70,90 +271,232 @@
                 const log = { w: parseFloat(w)||0, bf: parseFloat(bf)||0, date: new Date().toLocaleDateString() };
                 setMetrics([log, ...metrics]);
                 fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'metric', weight: log.w, bodyfat: log.bf, date: log.date}) });
+                document.getElementById('w-val').value = '';
+                document.getElementById('bf-val').value = '';
                 setTab('dashboard');
             };
 
             const stats = (() => {
-                const latest = metrics[0] || {w:0, bf:0}, initial = metrics[metrics.length - 1] || {w:0, bf:0};
+                const latest = metrics[0] || {w:0, bf:0};
                 return { w: latest.w, bf: latest.bf, s: [...new Set(workouts.map(w => w.date))].length };
             })();
 
-            // Find the most recent workout entry for the current active type
             const prevSession = workouts.find(w => w.type === activeWkt);
 
-            if (loading) return h('div', {className: 'h-screen flex items-center justify-center bg-[#020617] text-blue-500'}, h('i', {className: 'fas fa-dna text-5xl animate-spin'}));
+            if (loading) return h('div', {className: 'h-screen flex flex-col items-center justify-center'}, 
+                h('i', {className: 'fas fa-dumbbell text-6xl text-blue-500 loading-spinner mb-4'}),
+                h('p', {className: 'text-sm text-slate-400 font-bold uppercase tracking-wider'}, 'Loading Elite Data...')
+            );
 
-            return h('div', { className: 'max-w-md mx-auto p-4' },
-                h('div', { className: 'text-center py-6' },
-                    h('h1', { className: 'text-4xl font-black italic accent-text' }, 'PHASE 15'),
-                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-widest' }, 'Progressive Overload Active')
+            return h('div', { className: 'app-container max-w-md mx-auto p-5 pb-8' },
+                h('div', { className: 'text-center py-8 mb-6' },
+                    h('div', {className: 'mb-2'},
+                        h('i', {className: 'fas fa-dumbbell text-blue-500 text-2xl mb-3 pulse'})
+                    ),
+                    h('h1', { className: 'text-5xl font-black italic accent-text mb-2', style: {letterSpacing: '-1px'} }, 'PHASE 15'),
+                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-[3px]' }, 'Progressive Overload System')
                 ),
 
-                h('div', { className: 'flex mb-6 glass rounded-xl overflow-hidden' },
-                    ['dashboard', 'plan', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
+                h('div', { className: 'flex mb-6 glass-strong rounded-2xl overflow-hidden shadow-xl' },
+                    ['dashboard', 'plan', 'metrics'].map(t => h('button', { 
+                        key: t, 
+                        onClick: () => setTab(t), 
+                        className: `tab-btn ${tab === t ? 'tab-active' : ''}` 
+                    }, t))
                 ),
 
-                tab === 'dashboard' && h('div', { className: 'space-y-4' },
-                    h('div', { className: 'grid grid-cols-3 gap-2' },
-                        [{l:'Streak', v:stats.s, i:'fa-fire', c:'text-orange-500'}, {l:'Weight', v:stats.w, i:'fa-weight-scale', c:'text-blue-500'}, {l:'Body Fat', v:stats.bf+'%', i:'fa-percent', c:'text-emerald-500'}].map(s => 
-                            h('div', { key: s.l, className: 'glass p-3 rounded-xl text-center' }, h('i', { className: `fas ${s.i} ${s.c} text-[10px] mb-1` }), h('p', { className: 'text-[8px] uppercase font-bold text-slate-500' }, s.l), h('p', { className: 'text-sm font-black' }, s.v))
+                tab === 'dashboard' && h('div', { className: 'space-y-6' },
+                    h('div', { className: 'grid grid-cols-3 gap-3' },
+                        [
+                            {l:'Streak', v:stats.s, i:'fa-fire', c:'text-orange-500', u: 'days'}, 
+                            {l:'Weight', v:stats.w, i:'fa-weight-scale', c:'text-blue-500', u: 'lbs'}, 
+                            {l:'Body Fat', v:stats.bf, i:'fa-chart-line', c:'text-emerald-500', u: '%'}
+                        ].map(s => 
+                            h('div', { key: s.l, className: 'glass-strong stat-card p-5 rounded-2xl text-center ' + s.c }, 
+                                h('i', { className: `fas ${s.i} text-xl mb-3` }),
+                                h('p', { className: 'text-2xl font-black mb-1' }, s.v),
+                                h('p', { className: 'text-[9px] uppercase font-bold text-slate-400 tracking-wider' }, s.l)
+                            )
                         )
                     ),
-                    h('button', { onClick: () => setTab('plan'), className: 'w-full bg-blue-600 p-5 rounded-2xl font-black uppercase text-sm' }, 'View Training Plan')
+                    h('button', { 
+                        onClick: () => setTab('plan'), 
+                        className: 'w-full btn-primary p-6 rounded-2xl font-black uppercase text-sm tracking-wider shadow-xl' 
+                    }, 
+                        h('i', {className: 'fas fa-calendar-alt mr-2'}),
+                        'View Training Plan'
+                    ),
+                    workouts.length > 0 && h('div', { className: 'glass-strong p-5 rounded-2xl' },
+                        h('div', {className: 'flex items-center gap-2 mb-4'},
+                            h('i', {className: 'fas fa-history text-blue-500'}),
+                            h('h3', { className: 'text-xs font-black uppercase tracking-wider text-slate-400' }, 'Recent Activity')
+                        ),
+                        h('div', {className: 'space-y-2'},
+                            workouts.slice(0, 3).map((w, i) => 
+                                h('div', { key: i, className: 'flex justify-between items-center p-3 rounded-lg bg-slate-900/50' },
+                                    h('div', null,
+                                        h('p', { className: 'text-xs font-bold text-blue-400' }, w.type),
+                                        h('p', { className: 'text-[10px] text-slate-500 mt-1' }, w.date)
+                                    ),
+                                    h('i', {className: 'fas fa-check-circle text-emerald-500'})
+                                )
+                            )
+                        )
+                    )
                 ),
 
                 tab === 'plan' && h('div', { className: 'space-y-3' },
+                    h('div', {className: 'glass-strong p-5 rounded-2xl mb-4'},
+                        h('h2', {className: 'text-sm font-black uppercase tracking-wider text-center text-slate-300'}, 'Weekly Training Split')
+                    ),
                     ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => {
-                        const dayPlan = { Monday:'Upper Push (Hypertrophy)', Tuesday:'Half-Marathon Prep', Wednesday:'Lower Quad (Endurance)', Thursday:'Upper Pull (Strength)', Friday:'Lower Ham (Power)', Saturday:'Half-Marathon Prep', Sunday:'Rest & Recovery' };
-                        return h('div', { key: d, className: 'glass p-4 rounded-2xl flex justify-between items-center' },
-                            h('div', null, h('p', { className: 'text-[10px] font-bold text-slate-500 uppercase' }, d), h('p', { className: 'text-sm font-black' }, dayPlan[d])),
-                            dayPlan[d].includes('Rest') ? null : h('button', { onClick: () => { setActiveWkt(dayPlan[d]); setExData(templates[dayPlan[d]].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({w:'', r:''}) }))); setTab('workout'); }, className: 'bg-blue-600 px-4 py-2 rounded-lg font-black text-[10px]' }, 'START')
+                        const dayPlan = { 
+                            Monday:'Upper Push (Hypertrophy)', 
+                            Tuesday:'Half-Marathon Prep', 
+                            Wednesday:'Lower Quad (Endurance)', 
+                            Thursday:'Upper Pull (Strength)', 
+                            Friday:'Lower Ham (Power)', 
+                            Saturday:'Half-Marathon Prep', 
+                            Sunday:'Rest & Recovery' 
+                        };
+                        const isRest = dayPlan[d].includes('Rest');
+                        return h('div', { 
+                            key: d, 
+                            className: `glass-strong day-card p-5 rounded-2xl flex justify-between items-center ${isRest ? 'opacity-60' : ''}` 
+                        },
+                            h('div', null, 
+                                h('p', { className: 'text-[11px] font-bold text-blue-400 uppercase tracking-wide mb-1' }, d), 
+                                h('p', { className: 'text-sm font-black text-slate-200' }, dayPlan[d])
+                            ),
+                            !isRest && h('button', { 
+                                onClick: () => { 
+                                    setActiveWkt(dayPlan[d]); 
+                                    setExData(templates[dayPlan[d]].map(obj => ({ 
+                                        name: obj.n, 
+                                        target: obj.r, 
+                                        sets: Array(obj.s).fill({w:'', r:''}) 
+                                    }))); 
+                                    setTab('workout'); 
+                                }, 
+                                className: 'btn-primary px-5 py-2 rounded-xl font-black text-[11px] tracking-wide shadow-lg' 
+                            }, 
+                                h('i', {className: 'fas fa-play mr-1'}),
+                                'START'
+                            )
                         );
                     })
                 ),
 
-                tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-20' },
-                    h('div', { className: 'flex justify-between items-end' },
-                        h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
-                        h('button', { onClick: () => setActiveWkt(null), className: 'text-[10px] text-slate-500 font-bold uppercase underline' }, 'Cancel')
+                tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-5 pb-24' },
+                    h('div', { className: 'glass-strong p-5 rounded-2xl flex justify-between items-center mb-6' },
+                        h('div', null,
+                            h('p', {className: 'text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-1'}, 'Active Session'),
+                            h('h2', { className: 'text-lg font-black text-white' }, activeWkt)
+                        ),
+                        h('button', { 
+                            onClick: () => setActiveWkt(null), 
+                            className: 'text-[10px] text-slate-400 font-bold uppercase tracking-wide hover:text-red-400 transition-colors' 
+                        }, 
+                            h('i', {className: 'fas fa-times mr-1'}),
+                            'Cancel'
+                        )
                     ),
                     
-                    // The Logging Zone
-                    exData.map((ex, i) => h('div', { key: i, className: 'glass p-4 rounded-2xl' },
-                        h('div', { className: 'flex justify-between mb-3 font-black uppercase text-[10px]' }, h('p', {className:'text-slate-300'}, ex.name), h('span', {className:'text-blue-500'}, 'Aim: '+ex.target)),
-                        ex.sets.map((set, si) => h('div', { key: si, className: 'flex gap-2 mb-2' },
-                            h('input', { placeholder: 'LBS', type: 'number', className: 'input-box flex-1', value: set.w, onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], w: e.target.value}; setExData(n); }}),
-                            h('input', { placeholder: 'REPS', type: 'number', className: 'input-box flex-1', value: set.r, onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; setExData(n); }})
-                        ))
+                    exData.map((ex, i) => h('div', { key: i, className: 'glass-strong exercise-card p-5 rounded-2xl' },
+                        h('div', { className: 'flex justify-between mb-4' }, 
+                            h('p', {className:'text-sm font-black text-slate-100'}, ex.name), 
+                            h('span', {className:'text-[11px] font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full'}, 'Target: ' + ex.target)
+                        ),
+                        h('div', {className: 'space-y-3'},
+                            ex.sets.map((set, si) => h('div', { key: si, className: 'flex gap-3 items-center' },
+                                h('span', {className: 'text-xs font-black text-slate-500 w-6'}, `S${si+1}`),
+                                h('input', { 
+                                    placeholder: 'Weight', 
+                                    type: 'number', 
+                                    className: 'input-box flex-1', 
+                                    value: set.w, 
+                                    onChange: (e) => { 
+                                        const n = [...exData]; 
+                                        n[i].sets[si] = {...n[i].sets[si], w: e.target.value}; 
+                                        setExData(n); 
+                                    }
+                                }),
+                                h('span', {className: 'text-slate-600 font-bold'}, '×'),
+                                h('input', { 
+                                    placeholder: 'Reps', 
+                                    type: 'number', 
+                                    className: 'input-box flex-1', 
+                                    value: set.r, 
+                                    onChange: (e) => { 
+                                        const n = [...exData]; 
+                                        n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; 
+                                        setExData(n); 
+                                    }
+                                })
+                            ))
+                        )
                     )),
 
-                    // NEW: Previous Session Display directly in the workout tab
-                    prevSession && h('div', { className: 'history-card p-6 rounded-3xl mt-8' },
+                    prevSession && h('div', { className: 'history-card p-6 rounded-2xl mt-8' },
                         h('div', { className: 'flex items-center gap-2 mb-4' },
-                            h('i', { className: 'fas fa-clock-rotate-left text-blue-500 text-xs' }),
-                            h('p', { className: 'text-[10px] font-black uppercase tracking-widest text-blue-400' }, 'Last Session: ', prevSession.date)
+                            h('i', { className: 'fas fa-history text-blue-400 text-sm' }),
+                            h('p', { className: 'text-[11px] font-black uppercase tracking-widest text-blue-400' }, 'Last Session: ', prevSession.date)
                         ),
-                        h('pre', { className: 'text-[11px] text-slate-400 font-sans leading-relaxed whitespace-pre-line' }, prevSession.content)
+                        h('pre', { className: 'text-[12px] text-slate-300 font-sans leading-relaxed whitespace-pre-line' }, prevSession.content)
                     ),
 
-                    h('button', { onClick: saveWkt, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase shadow-lg shadow-blue-900/40 sticky bottom-4' }, 'Complete & Sync')
+                    h('div', {className: 'fixed bottom-6 left-0 right-0 px-5 max-w-md mx-auto'},
+                        h('button', { 
+                            onClick: saveWkt, 
+                            className: 'w-full btn-success p-5 rounded-2xl font-black uppercase tracking-wider shadow-2xl' 
+                        }, 
+                            h('i', {className: 'fas fa-check-circle mr-2'}),
+                            'Complete & Sync'
+                        )
+                    )
                 ) : null),
 
                 tab === 'metrics' && h('div', { className: 'space-y-6 pb-20' },
-                    h('div', { className: 'glass p-6 rounded-3xl space-y-4' },
-                        h('p', { className: 'text-xs font-black text-slate-500 uppercase text-center' }, 'Update Vitals'),
-                        h('div', { className: 'flex gap-2' },
-                            h('input', { id: 'w-val', type: 'number', placeholder: 'Weight', className: 'input-box flex-1' }),
-                            h('input', { id: 'bf-val', type: 'number', placeholder: 'BF %', className: 'input-box flex-1' })
+                    h('div', { className: 'glass-strong p-6 rounded-3xl space-y-5' },
+                        h('div', {className: 'text-center mb-2'},
+                            h('i', {className: 'fas fa-chart-line text-emerald-500 text-2xl mb-2'}),
+                            h('p', { className: 'text-xs font-black text-slate-300 uppercase tracking-wider' }, 'Update Body Metrics')
                         ),
-                        h('button', { onClick: saveMetric, className: 'w-full bg-emerald-600 p-4 rounded-2xl font-black uppercase' }, 'Update Cloud')
+                        h('div', { className: 'flex gap-3' },
+                            h('div', {className: 'flex-1'},
+                                h('label', {className: 'text-[10px] text-slate-400 uppercase font-bold mb-2 block'}, 'Weight (lbs)'),
+                                h('input', { id: 'w-val', type: 'number', placeholder: '0', className: 'input-box' })
+                            ),
+                            h('div', {className: 'flex-1'},
+                                h('label', {className: 'text-[10px] text-slate-400 uppercase font-bold mb-2 block'}, 'Body Fat %'),
+                                h('input', { id: 'bf-val', type: 'number', placeholder: '0', className: 'input-box' })
+                            )
+                        ),
+                        h('button', { 
+                            onClick: saveMetric, 
+                            className: 'w-full btn-success p-4 rounded-2xl font-black uppercase tracking-wider shadow-xl' 
+                        }, 
+                            h('i', {className: 'fas fa-cloud-upload-alt mr-2'}),
+                            'Sync to Cloud'
+                        )
                     ),
-                    h('div', { className: 'glass rounded-3xl overflow-hidden' },
-                        metrics.map((m, i) => h('div', { key: i, className: 'vitals-row p-4 flex justify-between items-center' },
-                            h('div', null, h('p', { className: 'text-xs font-black' }, m.date)),
-                            h('div', { className: 'flex gap-4' },
-                                h('div', {className:'text-center'}, h('p', {className:'text-sm font-black text-blue-400'}, m.w)),
-                                h('div', {className:'text-center'}, h('p', {className:'text-sm font-black text-emerald-400'}, m.bf+'%'))
+                    metrics.length > 0 && h('div', { className: 'glass-strong rounded-2xl overflow-hidden' },
+                        h('div', {className: 'p-4 border-b border-slate-700/50'},
+                            h('h3', {className: 'text-xs font-black uppercase tracking-wider text-slate-400'}, 'Metrics History')
+                        ),
+                        metrics.map((m, i) => h('div', { key: i, className: 'metric-row p-4 flex justify-between items-center' },
+                            h('div', null, 
+                                h('p', { className: 'text-xs font-bold text-slate-300' }, m.date)
+                            ),
+                            h('div', { className: 'flex gap-6' },
+                                h('div', {className:'text-center'}, 
+                                    h('p', {className:'text-[10px] text-slate-500 mb-1'}, 'Weight'),
+                                    h('p', {className:'text-base font-black text-blue-400'}, m.w)
+                                ),
+                                h('div', {className:'text-center'}, 
+                                    h('p', {className:'text-[10px] text-slate-500 mb-1'}, 'BF%'),
+                                    h('p', {className:'text-base font-black text-emerald-400'}, m.bf)
+                                )
                             )
                         ))
                     )
@@ -162,6 +505,7 @@
         }
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(h(App));
+        });
     </script>
 </body>
 </html>
