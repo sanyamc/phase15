@@ -3,193 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PHASE 15 | Recomp Command</title>
+    <title>PHASE 15 | RECOMP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; min-height: 100vh; }
-        .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-        .input-dark { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 12px; padding: 10px; width: 100%; text-align: center; }
-        .tab-active { background: #2563eb !important; color: white !important; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); }
-        .progress-fill { height: 100%; transition: width 0.8s ease; border-radius: 99px; }
-        pre { white-space: pre-wrap; word-wrap: break-word; }
+        body { font-family: 'Inter', sans-serif; background: #020617; color: white; margin: 0; padding: 0; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .input-box { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; padding: 10px; width: 100%; text-align: center; font-weight: bold; }
+        .tab-btn { flex: 1; padding: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #64748b; border-bottom: 2px solid transparent; transition: 0.3s; }
+        .tab-active { color: #3b82f6; border-bottom: 2px solid #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        .btn-blue { background: #2563eb; color: white; font-weight: 900; text-transform: uppercase; padding: 15px; border-radius: 12px; width: 100%; border: none; }
     </style>
 </head>
-<body class="bg-slate-950">
-    <div id="app"></div>
+<body>
+    <div id="root"></div>
 
-    <script type="module">
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdnhWN3Hq5CySfu2GSse8FYv2_OksqhqQgSvI57IbLseXw4t7r8JoHbuucegB-489X/exec'; 
-        const { createElement: e, useState, useEffect, useMemo } = React;
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdnhWN3Hq5CySfu2GSse8FYv2_OksqhqQgSvI57IbLseXw4t7r8JoHbuucegB-489X/exec';
+        const { createElement: h, useState, useEffect } = React;
 
         function App() {
-            const [activeTab, setActiveTab] = useState('history');
+            const [tab, setTab] = useState('workout');
             const [workouts, setWorkouts] = useState([]);
             const [metrics, setMetrics] = useState([]);
-            const [macros, setMacros] = useState({ p: 0, c: 0, f: 0 });
-            const [currentWorkout, setCurrentWorkout] = useState(null);
-            const [activeExercises, setActiveExercises] = useState([]);
+            const [activeWkt, setActiveWkt] = useState(null);
+            const [exData, setExData] = useState([]);
             const [status, setStatus] = useState('');
 
-            const targets = { p: 180, c: 200, f: 65 };
-
+            // Data Mapping
             const templates = {
-                'Upper Push': [{n: 'Bench Press', s: 3}, {n: 'Overhead Press', s: 3}, {n: 'Lateral Raises', s: 3}],
-                'Upper Pull': [{n: 'Deadlifts', s: 3}, {n: 'Pull Ups', s: 3}, {n: 'Bicep Curls', s: 3}],
-                'Lower Quad': [{n: 'Back Squat', s: 4}, {n: 'Leg Press', s: 3}, {n: 'Calf Raises', s: 3}],
-                'Lower Ham': [{n: 'RDL', s: 4}, {n: 'Leg Curls', s: 3}, {n: 'Glute Bridges', s: 3}],
-                'Zone 2 Run': [{n: 'Aerobic Run', s: 1}]
+                'Push': ['Bench Press', 'Overhead Press', 'Lateral Raise'],
+                'Pull': ['Deadlift', 'Pull Up', 'Bicep Curl'],
+                'Lower Quad': ['Back Squat', 'Leg Press', 'Calf Raise'],
+                'Lower Ham': ['RDL', 'Leg Curl', 'Lunges'],
+                'Cardio': ['Easy Run (30m)', 'Long Run (60m)']
             };
 
+            // Persistence
             useEffect(() => {
-                const savedW = localStorage.getItem('p15_workouts');
-                const savedM = localStorage.getItem('p15_metrics');
+                const savedW = localStorage.getItem('p15_w');
+                const savedM = localStorage.getItem('p15_m');
                 if (savedW) setWorkouts(JSON.parse(savedW));
                 if (savedM) setMetrics(JSON.parse(savedM));
-                fetchHistory();
             }, []);
 
             useEffect(() => {
-                localStorage.setItem('p15_workouts', JSON.stringify(workouts));
-                localStorage.setItem('p15_metrics', JSON.stringify(metrics));
+                localStorage.setItem('p15_w', JSON.stringify(workouts));
+                localStorage.setItem('p15_m', JSON.stringify(metrics));
             }, [workouts, metrics]);
 
-            const fetchHistory = async () => {
-                if (!SCRIPT_URL.includes('http')) return;
-                try {
-                    const res = await fetch(`${SCRIPT_URL}?action=getHistory`);
-                    const data = await res.json();
-                    if (Array.isArray(data)) setWorkouts(data);
-                } catch (err) { console.log("Cloud offline"); }
+            const start = (t) => {
+                setActiveWkt(t);
+                setExData(templates[t].map(name => ({ name, w: '', r: '' })));
             };
 
-            const startWorkout = (type) => {
-                const ex = templates[type].map(t => ({
-                    name: t.n,
-                    sets: Array(t.s).fill().map(() => ({ w: '', r: '' }))
-                }));
-                setCurrentWorkout(type);
-                setActiveExercises(ex);
+            const save = () => {
+                const text = exData.map(e => `${e.name}: ${e.w} lbs x ${e.r} reps`).join('\n');
+                const log = { type: activeWkt, date: new Date().toLocaleDateString(), content: text };
+                setWorkouts([log, ...workouts]);
+                setActiveWkt(null);
+                setTab('history');
+                
+                if(SCRIPT_URL.includes('http')) {
+                    setStatus('Syncing...');
+                    fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'lift', ...log}) })
+                    .then(() => setStatus('✓ Cloud Saved')).catch(() => setStatus('Local Only'));
+                }
             };
 
-            const finishWorkout = async () => {
-                const summary = activeExercises.map(ex => 
-                    `${ex.name.toUpperCase()}\n` + ex.sets.map((s, i) => `Set ${i+1}: ${s.w}lbs x ${s.r}`).join('\n')
-                ).join('\n\n');
-
-                const newLog = { type: currentWorkout, date: new Date().toLocaleDateString(), content: summary };
-                setWorkouts([newLog, ...workouts]);
-                setCurrentWorkout(null);
-                setActiveTab('history');
-
-                setStatus('Syncing...');
-                try {
-                    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ dataType: 'lift', ...newLog }) });
-                    setStatus('✓ Saved');
-                } catch (e) { setStatus('Local Only'); }
+            const addMetric = () => {
+                const val = document.getElementById('w-val').value;
+                if(!val) return;
+                const m = { type: 'weight', value: val, date: new Date().toLocaleDateString() };
+                setMetrics([m, ...metrics]);
+                document.getElementById('w-val').value = '';
+                setTab('history');
             };
 
-            const updateSet = (exIdx, setIdx, field, val) => {
-                const updated = [...activeExercises];
-                updated[exIdx].sets[setIdx][field] = val;
-                setActiveExercises(updated);
-            };
-
-            const stats = useMemo(() => {
-                const weights = metrics.filter(m => m.type === 'weight');
-                const curr = weights[0]?.value || 0;
-                const start = weights[weights.length - 1]?.value || 0;
-                return {
-                    streak: [...new Set(workouts.map(w => w.date))].length,
-                    total: workouts.length,
-                    loss: (start - curr).toFixed(1),
-                    curr: curr
-                };
-            }, [workouts, metrics]);
-
-            return e('div', { className: 'max-w-md mx-auto p-5 pb-24' },
-                e('header', { className: 'mb-8 mt-4 text-center' },
-                    e('h1', { className: 'text-3xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400' }, 'PHASE 15'),
-                    e('p', { className: 'text-[9px] font-bold text-slate-500 uppercase tracking-widest' }, 'March 7th Race Prep')
+            return h('div', { className: 'max-w-md mx-auto p-4' },
+                // Header
+                h('div', { className: 'text-center py-6' },
+                    h('h1', { className: 'text-3xl font-black italic text-blue-500' }, 'PHASE 15'),
+                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase' }, 'March 7 Race Countdown')
                 ),
 
-                // SUMMARY
-                e('div', { className: 'grid grid-cols-2 gap-3 mb-6' },
-                    [{l:'Weight Loss', v:stats.loss + ' lbs', i:'fa-arrow-trend-down', c:'text-emerald-400'},
-                     {l:'Current', v:stats.curr || '--', i:'fa-weight-scale', c:'text-purple-400'}].map(s => 
-                        e('div', { key: s.l, className: 'glass-card p-4 rounded-2xl border border-slate-800' },
-                            e('i', { className: `fas ${s.i} ${s.c} mb-1 text-xs` }),
-                            e('p', { className: 'text-[10px] uppercase font-black text-slate-500' }, s.l),
-                            e('p', { className: 'text-xl font-black' }, s.v)
-                        )
+                // Nav
+                h('div', { className: 'flex mb-6 glass rounded-xl overflow-hidden' },
+                    ['workout', 'history', 'metrics'].map(t => 
+                        h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t)
                     )
                 ),
 
-                // NAV
-                e('div', { className: 'flex gap-2 mb-8 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 sticky top-4 z-50' },
-                    ['history', 'workout', 'fuel', 'metrics'].map(tab => 
-                        e('button', { key: tab, onClick: () => setActiveTab(tab), className: `flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === tab ? 'tab-active' : 'text-slate-500'}` }, tab)
-                    )
-                ),
-
-                // HISTORY
-                activeTab === 'history' && e('div', { className: 'space-y-4' },
-                    workouts.map((w, i) => e('div', { key: i, className: 'glass-card p-5 rounded-2xl border-l-4 border-blue-500' },
-                        e('div', { className: 'flex justify-between mb-3' },
-                            e('h3', { className: 'text-sm font-black uppercase text-blue-400' }, w.type),
-                            e('span', { className: 'text-[10px] font-bold text-slate-500' }, w.date)
-                        ),
-                        e('pre', { className: 'text-[11px] text-slate-300 leading-tight font-medium' }, w.content)
-                    ))
-                ),
-
-                // WORKOUT
-                activeTab === 'workout' && (!currentWorkout ? (
-                    e('div', { className: 'space-y-3' },
-                        Object.keys(templates).map(t => e('button', { onClick: () => startWorkout(t), className: 'w-full glass-card p-5 rounded-2xl text-left font-black uppercase text-sm border border-slate-800 hover:border-blue-500 transition' }, t))
-                    )
-                ) : (
-                    e('div', { className: 'space-y-4' },
-                        e('h2', { className: 'text-xl font-black text-blue-400 mb-4' }, currentWorkout),
-                        activeExercises.map((ex, exIdx) => e('div', { key: exIdx, className: 'glass-card p-4 rounded-2xl border border-slate-800' },
-                            e('p', { className: 'text-xs font-black uppercase text-emerald-400 mb-3' }, ex.name),
-                            ex.sets.map((s, si) => e('div', { key: si, className: 'flex gap-2 mb-2' },
-                                e('input', { type: 'number', placeholder: 'LBS', className: 'input-dark text-xs flex-1', value: s.w, onChange: (v) => updateSet(exIdx, si, 'w', v.target.value) }),
-                                e('input', { type: 'number', placeholder: 'REPS', className: 'input-dark text-xs flex-1', value: s.r, onChange: (v) => updateSet(exIdx, si, 'r', v.target.value) })
-                            ))
+                // WORKOUT VIEW
+                tab === 'workout' && (
+                    !activeWkt ? h('div', { className: 'space-y-3' },
+                        Object.keys(templates).map(t => h('button', { key: t, onClick: () => start(t), className: 'glass p-5 w-full text-left rounded-2xl font-bold flex justify-between' }, t, h('i', {className:'fas fa-plus text-blue-500'})))
+                    ) : h('div', { className: 'space-y-4' },
+                        h('h2', { className: 'text-xl font-bold text-blue-400 px-2' }, activeWkt),
+                        exData.map((ex, i) => h('div', { key: i, className: 'glass p-4 rounded-2xl' },
+                            h('p', { className: 'text-xs font-bold text-slate-400 mb-2' }, ex.name),
+                            h('div', { className: 'flex gap-2' },
+                                h('input', { placeholder: 'LBS', type: 'number', className: 'input-box', value: ex.w, onChange: (e) => {
+                                    const next = [...exData]; next[i].w = e.target.value; setExData(next);
+                                }}),
+                                h('input', { placeholder: 'REPS', type: 'number', className: 'input-box', value: ex.r, onChange: (e) => {
+                                    const next = [...exData]; next[i].r = e.target.value; setExData(next);
+                                }})
+                            )
                         )),
-                        e('button', { onClick: finishWorkout, className: 'w-full bg-blue-600 py-4 rounded-2xl font-black uppercase mt-4' }, 'Complete & Sync')
+                        h('button', { onClick: save, className: 'btn-blue mt-4' }, 'Complete Session')
                     )
-                )),
+                ),
 
-                // FUEL
-                activeTab === 'fuel' && e('div', { className: 'glass-card p-6 rounded-3xl space-y-6' },
-                    [{l:'Protein', k:'p', c:'bg-emerald-500', t:targets.p}, {l:'Carbs', k:'c', c:'bg-blue-500', t:targets.c}, {l:'Fats', k:'f', c:'bg-amber-500', t:targets.f}].map(m => e('div', { key: m.k },
-                        e('div', { className: 'flex justify-between text-[10px] font-black uppercase mb-2' }, e('span', null, m.l), e('span', {className:'text-slate-500'}, `${macros[m.k]}g / ${m.t}g`)),
-                        e('div', { className: 'bg-slate-800 h-2 rounded-full mb-3' }, e('div', { className: `progress-fill ${m.c}`, style: { width: `${Math.min((macros[m.k]/m.t)*100, 100)}%` } })),
-                        e('input', { type: 'number', className: 'input-dark text-sm', placeholder: `Add ${m.l}`, value: macros[m.k] || '', onChange: (v) => setMacros({...macros, [m.k]: v.target.value}) })
+                // HISTORY VIEW
+                tab === 'history' && h('div', { className: 'space-y-4' },
+                    metrics.length > 0 && h('div', { className: 'glass p-4 rounded-2xl border-l-4 border-emerald-500 mb-6' },
+                        h('p', { className: 'text-[10px] font-bold text-slate-500 uppercase' }, 'Latest Weight'),
+                        h('p', { className: 'text-2xl font-black' }, metrics[0].value, ' lbs')
+                    ),
+                    workouts.map((w, i) => h('div', { key: i, className: 'glass p-5 rounded-2xl border-l-4 border-blue-600' },
+                        h('div', { className: 'flex justify-between mb-2' },
+                            h('span', { className: 'font-black text-blue-400 text-sm uppercase' }, w.type),
+                            h('span', { className: 'text-[10px] text-slate-500' }, w.date)
+                        ),
+                        h('pre', { className: 'text-xs text-slate-300 font-sans' }, w.content)
                     ))
                 ),
 
-                // METRICS
-                activeTab === 'metrics' && e('div', { className: 'glass-card p-8 rounded-3xl space-y-4 text-center' },
-                    e('p', { className: 'text-[10px] font-black text-slate-500 uppercase' }, 'Update Weight'),
-                    e('input', { id: 'w-in', type: 'number', className: 'input-dark text-2xl font-black', placeholder: '0.0' }),
-                    e('button', { className: 'w-full bg-blue-600 py-4 rounded-2xl font-black uppercase', onClick: () => {
-                        const val = document.getElementById('w-in').value;
-                        if(val) setMetrics([{type:'weight', value: parseFloat(val), date: new Date().toLocaleDateString()}, ...metrics]);
-                        setActiveTab('history');
-                    }}, 'Save Vitals')
+                // METRICS VIEW
+                tab === 'metrics' && h('div', { className: 'glass p-6 rounded-3xl text-center' },
+                    h('p', { className: 'text-xs font-bold text-slate-500 uppercase mb-4' }, 'Update Current Weight'),
+                    h('input', { id: 'w-val', type: 'number', placeholder: '0.0', className: 'input-box text-2xl mb-4 h-16' }),
+                    h('button', { onClick: addMetric, className: 'btn-blue' }, 'Save Weight')
                 ),
 
-                status && e('div', { className: 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 px-6 py-2 rounded-full text-[10px] font-black shadow-2xl' }, status)
+                status && h('div', { className: 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 px-6 py-2 rounded-full text-[10px] font-bold shadow-2xl' }, status)
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('app'));
-        root.render(e(App));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(h(App));
     </script>
 </body>
 </html>
