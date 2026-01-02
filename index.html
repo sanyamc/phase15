@@ -11,7 +11,7 @@
   <style>
     body { font-family: 'Inter', sans-serif; background: #0f172a; min-height: 100vh; color: white; }
     .glass-card { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-    .input-dark { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; padding: 10px; width: 100%; }
+    .input-dark { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; padding: 10px; width: 100%; text-align: center; }
     .tab-active { border-bottom: 3px solid #10b981; color: #10b981; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     .timer-alert { color: #ef4444; animation: pulse 1s infinite; }
@@ -21,89 +21,76 @@
   <div id="app"></div>
 
   <script type="module">
-    // ⚠️ PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOZRymFSVmw6gU6G8I6coN_-hlBF_LTnKND4VO3n_-dVO_qptWTLj9rHX5IYZJw0kM/exec';
-    
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGuyYC-vccHDsEnuQgdC9gkuF8P7gksVEuRf82Z7kBXC7KVn4JnPZYO3R79fjf_fYh/exec'; // ⚠️ UPDATE THIS
     const { createElement: e, useState, useEffect } = React;
 
     function App() {
       const [activeTab, setActiveTab] = useState('workout');
-      const [workouts, setWorkouts] = useState([]);
-      const [metrics, setMetrics] = useState([]);
+      const [historyData, setHistoryData] = useState([]);
       const [currentWorkout, setCurrentWorkout] = useState(null);
       const [exercises, setExercises] = useState([]);
       const [saveStatus, setSaveStatus] = useState('');
       const [timeLeft, setTimeLeft] = useState(3600);
       const [timerActive, setTimerActive] = useState(false);
 
-      // FULL SCIENTIFIC SPLIT (No Acronyms)
       const workoutTemplates = {
         'Upper Body Push': [
-          { name: 'Barbell Bench Press', sets: 3, reps: '6-8', category: 'Push' },
-          { name: 'Dumbbell Overhead Press', sets: 3, reps: '8-10', category: 'Push' },
-          { name: 'Incline Dumbbell Press', sets: 3, reps: '10-12', category: 'Push' },
-          { name: 'Dips', sets: 3, reps: 'Maximum', category: 'Push' }
+          { name: 'Barbell Bench Press', sets: 3, reps: '6-8' },
+          { name: 'Dumbbell Overhead Press', sets: 3, reps: '8-10' },
+          { name: 'Incline Dumbbell Press', sets: 3, reps: '10-12' },
+          { name: 'Tricep Dips', sets: 3, reps: 'Maximum' }
         ],
         'Upper Body Pull': [
-          { name: 'Pull Ups', sets: 3, reps: 'Maximum', category: 'Pull' },
-          { name: 'Barbell Bent Over Row', sets: 3, reps: '8-10', category: 'Pull' },
-          { name: 'Seated Cable Rows', sets: 3, reps: '10-12', category: 'Pull' },
-          { name: 'Face Pulls', sets: 3, reps: '15-20', category: 'Pull' }
+          { name: 'Pull Ups', sets: 3, reps: 'Maximum' },
+          { name: 'Barbell Bent Over Row', sets: 3, reps: '8-10' },
+          { name: 'Seated Cable Rows', sets: 3, reps: '10-12' },
+          { name: 'Dumbbell Bicep Curls', sets: 3, reps: '12-15' }
         ],
         'Lower Body Anterior': [
-          { name: 'Barbell Back Squat', sets: 3, reps: '6-8', category: 'Anterior' },
-          { name: 'Leg Press', sets: 3, reps: '12-15', category: 'Anterior' },
-          { name: 'Leg Extensions', sets: 3, reps: '12-15', category: 'Anterior' },
-          { name: 'Seated Calf Raises', sets: 4, reps: '15', category: 'Anterior' }
+          { name: 'Barbell Back Squat', sets: 3, reps: '6-8' },
+          { name: 'Leg Press', sets: 3, reps: '12-15' },
+          { name: 'Leg Extensions', sets: 3, reps: '12-15' },
+          { name: 'Seated Calf Raises', sets: 4, reps: '15' }
         ],
         'Lower Body Posterior': [
-          { name: 'Barbell Deadlift', sets: 3, reps: '5', category: 'Posterior' },
-          { name: 'Romanian Deadlift', sets: 3, reps: '10-12', category: 'Posterior' },
-          { name: 'Lying Leg Curls', sets: 3, reps: '12-15', category: 'Posterior' },
-          { name: 'Hanging Leg Raises', sets: 3, reps: '15', category: 'Core' }
+          { name: 'Barbell Deadlift', sets: 3, reps: '5' },
+          { name: 'Romanian Deadlift', sets: 3, reps: '10-12' },
+          { name: 'Lying Leg Curls', sets: 3, reps: '12-15' },
+          { name: 'Hanging Leg Raises', sets: 3, reps: '15' }
         ],
-        'Run - Aerobic Base': [{ name: 'Zone 2 Easy Run', sets: 1, reps: '45 min', category: 'Cardio' }],
-        'Run - Endurance': [{ name: 'Long Distance Run', sets: 1, reps: '60-90 min', category: 'Cardio' }]
+        'Run - Easy': [{ name: 'Zone 2 Cardio', sets: 1, reps: '45 min' }],
+        'Run - Long': [{ name: 'Endurance Run', sets: 1, reps: '60-90 min' }]
       };
 
-      // Timer Logic
       useEffect(() => {
         let interval = null;
         if (timerActive && timeLeft > 0) {
           interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-        } else {
-          clearInterval(interval);
-        }
+        } else { clearInterval(interval); }
         return () => clearInterval(interval);
       }, [timerActive, timeLeft]);
 
-      const formatTime = (seconds) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}:${s < 10 ? '0' : ''}${s}`;
+      useEffect(() => {
+        if (activeTab === 'history') fetchHistory();
+      }, [activeTab]);
+
+      const fetchHistory = async () => {
+        setSaveStatus('Loading History...');
+        try {
+          const res = await fetch(`${SCRIPT_URL}?action=getWorkouts`);
+          const data = await res.json();
+          setHistoryData(data);
+          setSaveStatus('');
+        } catch (err) { setSaveStatus('History Load Failed'); }
       };
 
       const startWorkout = (type) => {
+        setTimeLeft(3600);
         setTimerActive(true);
-        const template = workoutTemplates[type];
         setCurrentWorkout({ type, date: new Date().toLocaleDateString() });
-        setExercises(template.map(ex => ({
-          ...ex,
-          completed: false,
-          sets_data: Array(ex.sets).fill().map(() => ({ weight: '', reps: '' }))
+        setExercises(workoutTemplates[type].map(ex => ({
+          ...ex, sets_data: Array(ex.sets || 1).fill().map(() => ({ weight: '', reps: '' }))
         })));
-        setActiveTab('workout');
-      };
-
-      const addExercise = () => {
-        setExercises([...exercises, {
-          name: 'Alternative Exercise',
-          sets: 3,
-          reps: '10',
-          category: 'Push',
-          completed: false,
-          sets_data: Array(3).fill().map(() => ({ weight: '', reps: '' }))
-        }]);
       };
 
       const updateSet = (exIdx, setIdx, field, val) => {
@@ -114,37 +101,35 @@
 
       const finishWorkout = async () => {
         setTimerActive(false);
-        const logEntry = {
-          type: currentWorkout.type,
-          content: exercises.map(ex => `${ex.name}: ${ex.sets_data.map(s => `${s.weight}lbs x ${s.reps}`).join(',')}`).join(' | '),
-          notes: `Time Remaining: ${formatTime(timeLeft)}`
-        };
+        const content = exercises.map(ex => 
+          `${ex.name}: ${ex.sets_data.map(s => `${s.weight}lbs x ${s.reps}`).join(' | ')}`
+        ).join('\n');
         
-        setSaveStatus('Syncing to Sheets...');
+        setSaveStatus('Syncing...');
         try {
-          await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(logEntry) });
-          setSaveStatus('✓ Session Secured!');
-          setTimeout(() => { setSaveStatus(''); setCurrentWorkout(null); }, 3000);
-        } catch (e) { setSaveStatus('Error Syncing'); }
+          await fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            body: JSON.stringify({ type: currentWorkout.type, content: content, notes: `Remaining: ${Math.floor(timeLeft/60)}m` }) 
+          });
+          setSaveStatus('✓ Saved!');
+          setTimeout(() => { setSaveStatus(''); setCurrentWorkout(null); setActiveTab('history'); }, 2000);
+        } catch (e) { setSaveStatus('Sync Error'); }
       };
 
       return e('div', { className: 'max-w-md mx-auto min-h-screen pb-20' },
-        // Header & Timer
-        e('header', { className: 'p-6 flex justify-between items-center bg-slate-900 sticky top-0 z-10' },
+        e('header', { className: 'p-6 flex justify-between items-center bg-slate-900 sticky top-0 z-50' },
           e('div', null,
             e('h1', { className: 'text-2xl font-black italic text-emerald-500 uppercase tracking-tighter' }, 'Phase 15'),
-            e('p', { className: 'text-[10px] text-slate-500 font-bold uppercase' }, '6:00 AM Protocol')
+            e('p', { className: 'text-[10px] text-slate-500 font-bold uppercase' }, '6:00 AM Scientist Mode')
           ),
           e('div', { className: 'text-right' },
-            e('p', { className: `text-2xl font-black tabular-nums ${timeLeft < 300 ? 'timer-alert' : ''}` }, formatTime(timeLeft)),
-            e('button', { 
-              onClick: () => setTimerActive(!timerActive),
-              className: 'text-[10px] bg-slate-700 px-2 py-1 rounded font-bold'
-            }, timerActive ? 'PAUSE' : 'START')
+            e('p', { className: `text-2xl font-black tabular-nums ${timeLeft < 300 ? 'timer-alert' : ''}` }, 
+              `${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')}`),
+            e('button', { onClick: () => setTimerActive(!timerActive), className: 'text-[10px] bg-slate-700 px-2 py-1 rounded font-bold' }, timerActive ? 'PAUSE' : 'START')
           )
         ),
 
-        // Navigation
         e('nav', { className: 'flex justify-around border-b border-slate-800 bg-slate-900' },
           ['workout', 'history', 'metrics'].map(tab => 
             e('button', {
@@ -155,70 +140,54 @@
           )
         ),
 
-        // Main Content
         e('main', { className: 'p-4' },
           activeTab === 'workout' && (
             !currentWorkout ? (
               e('div', { className: 'space-y-3' },
                 Object.keys(workoutTemplates).map(type => 
-                  e('button', {
-                    key: type,
-                    onClick: () => startWorkout(type),
-                    className: 'w-full glass-card p-5 rounded-xl text-left border-l-4 border-emerald-500 hover:bg-slate-800 transition'
-                  }, 
+                  e('button', { key: type, onClick: () => startWorkout(type), className: 'w-full glass-card p-5 rounded-xl text-left border-l-4 border-emerald-500' },
                     e('h3', { className: 'font-black uppercase text-sm' }, type),
-                    e('p', { className: 'text-xs text-slate-400' }, 'Scientific Split Protocol')
+                    e('p', { className: 'text-xs text-slate-400' }, 'Click to Start Session')
                   )
                 )
               )
             ) : (
               e('div', { className: 'space-y-4' },
-                e('div', { className: 'flex justify-between items-center' },
-                   e('h2', { className: 'font-bold text-emerald-400' }, currentWorkout.type),
-                   e('button', { onClick: addExercise, className: 'bg-slate-700 px-3 py-1 rounded text-xs font-bold' }, '+ ALT')
-                ),
                 exercises.map((ex, exIdx) => 
                   e('div', { key: exIdx, className: 'glass-card p-4 rounded-xl' },
-                    e('p', { className: 'text-xs font-black uppercase text-slate-400 mb-3' }, `${ex.name} [${ex.reps}]`),
+                    e('p', { className: 'text-xs font-black uppercase text-emerald-400 mb-3' }, ex.name),
                     ex.sets_data.map((set, setIdx) => 
                       e('div', { key: setIdx, className: 'flex gap-2 mb-2' },
-                        e('span', { className: 'text-[10px] text-slate-600 w-8 flex items-center' }, `S${setIdx+1}`),
-                        e('input', {
-                          type: 'number', placeholder: 'LBS',
-                          className: 'input-dark text-center',
-                          onChange: (v) => updateSet(exIdx, setIdx, 'weight', v.target.value)
-                        }),
-                        e('input', {
-                          type: 'number', placeholder: 'REPS',
-                          className: 'input-dark text-center',
-                          onChange: (v) => updateSet(exIdx, setIdx, 'reps', v.target.value)
-                        })
+                        e('input', { type: 'number', placeholder: 'LBS', className: 'input-dark', onChange: (v) => updateSet(exIdx, setIdx, 'weight', v.target.value) }),
+                        e('input', { type: 'number', placeholder: 'REPS', className: 'input-dark', onChange: (v) => updateSet(exIdx, setIdx, 'reps', v.target.value) })
                       )
                     )
                   )
                 ),
-                e('button', {
-                  onClick: finishWorkout,
-                  className: 'w-full bg-emerald-600 py-4 rounded-xl font-black uppercase shadow-lg active:scale-95 transition'
-                }, saveStatus || 'Finish & Sync')
+                e('button', { onClick: finishWorkout, className: 'w-full bg-emerald-600 py-4 rounded-xl font-black uppercase' }, saveStatus || 'Complete Session')
               )
             )
           ),
 
-          activeTab === 'metrics' && e('div', { className: 'glass-card p-6 rounded-xl' },
-            e('h3', { className: 'font-black uppercase mb-4 text-center' }, 'Body Recomp Stats'),
-            e('div', { className: 'space-y-4' },
-              e('input', { className: 'input-dark', placeholder: 'Weight (lbs)' }),
-              e('input', { className: 'input-dark', placeholder: 'Body Fat %' }),
-              e('button', { className: 'w-full bg-slate-700 py-3 rounded-lg font-bold' }, 'Log Progress')
+          activeTab === 'history' && (
+            e('div', { className: 'space-y-3' },
+              saveStatus && e('p', { className: 'text-center text-xs animate-pulse' }, saveStatus),
+              historyData.map((log, i) => 
+                e('div', { key: i, className: 'glass-card p-4 rounded-xl' },
+                  e('div', { className: 'flex justify-between mb-2 text-[10px] font-bold uppercase' },
+                    e('span', { className: 'text-emerald-500' }, new Date(log.date).toLocaleDateString()),
+                    e('span', { className: 'text-slate-500' }, log.type)
+                  ),
+                  e('pre', { className: 'text-[10px] text-slate-300 whitespace-pre-wrap font-sans' }, log.content)
+                )
+              )
             )
           )
         )
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('app'));
-    root.render(e(App));
+    ReactDOM.createRoot(document.getElementById('app')).render(e(App));
   </script>
 </body>
 </html>
