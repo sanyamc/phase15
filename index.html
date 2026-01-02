@@ -3,133 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PHASE 15 | RECOMP ELITE</title>
+    <title>PHASE 15 | CLOUD FIRST</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Inter', sans-serif; background: #020617; color: white; margin: 0; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background: #020617; color: white; margin: 0; }
         .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
         .input-box { background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; padding: 10px; width: 100%; text-align: center; font-weight: bold; }
         .tab-btn { flex: 1; padding: 14px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #475569; border-bottom: 2px solid transparent; }
         .tab-active { color: #3b82f6; border-bottom: 2px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
         .accent-text { background: linear-gradient(to right, #60a5fa, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .streak-fire { animation: pulse 1.5s infinite; text-shadow: 0 0 15px rgba(249, 115, 22, 0.6); }
-        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } }
-        .vitals-row { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .loading-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdnhWN3Hq5CySfu2GSse8FYv2_OksqhqQgSvI57IbLseXw4t7r8JoHbuucegB-489X/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBw_mGlIDNP4tycVQ_F4VSQrqUG5Yll7vB6-aNIhXw2IsY_aBGPnbD_85gCbkdWDVS/exec';
         const { createElement: h, useState, useEffect } = React;
 
         function App() {
-            const [tab, setTab] = useState('history');
+            const [tab, setTab] = useState('dashboard');
             const [workouts, setWorkouts] = useState([]);
             const [metrics, setMetrics] = useState([]);
+            const [loading, setLoading] = useState(true);
             const [activeWkt, setActiveWkt] = useState(null);
             const [exData, setExData] = useState([]);
-            const [showMilestone, setShowMilestone] = useState(null);
 
-            const milestones = {
-                7: { title: "Foundation Set", msg: "Neuro-muscular adaptation: Your brain is mastering motor unit recruitment.", icon: "fa-seedling" },
-                21: { title: "Habit Locked", msg: "Automation phase complete. The friction of starting has officially vanished.", icon: "fa-anchor" },
-                50: { title: "Metabolic Shift", msg: "Mitochondrial biogenesis: Your body is now a more efficient engine.", icon: "fa-fire-alt" },
-                100: { title: "Elite Recomp", msg: "Transformation complete. You have reached the pinnacle of discipline.", icon: "fa-crown" }
-            };
-
-            // SCIENTIFIC TEMPLATES UPDATED
             const templates = {
-                'Upper Push (Hypertrophy)': [
-                    {n: 'Incline DB Press', s: 3, r: '8-10'},
-                    {n: 'Dips (Chest Focused)', s: 3, r: '10-12'},
-                    {n: 'Overhead Press', s: 3, r: '8-10'},
-                    {n: 'Lateral Raises', s: 3, r: '12-15'}
-                ],
-                'Upper Pull (Strength)': [
-                    {n: 'Chin-Ups (Weighted)', s: 3, r: '6-8'},
-                    {n: 'Barbell Rows', s: 3, r: '8-10'},
-                    {n: 'Preacher Curls', s: 3, r: '10-12'},
-                    {n: 'Face Pulls', s: 3, r: '15-20'}
-                ],
-                'Lower Quad (Endurance)': [
-                    {n: 'Back Squat', s: 4, r: '8-10'},
-                    {n: 'Leg Press', s: 3, r: '12-15'},
-                    {n: 'Bulgarian Split Squat', s: 3, r: '10-12'},
-                    {n: 'Calf Raises', s: 4, r: '15-20'}
-                ],
-                'Lower Ham (Power)': [
-                    {n: 'Deadlift', s: 3, r: '5-8'},
-                    {n: 'Romanian Deadlift', s: 3, r: '10-12'},
-                    {n: 'Leg Curls', s: 3, r: '12-15'},
-                    {n: 'Hanging Leg Raises', s: 3, r: '15-20'}
-                ],
-                'Half-Marathon Prep': [
-                    {n: 'Zone 2 Foundation Run', s: 1, r: '45 min'},
-                    {n: 'Speed Intervals', s: 6, r: '400m'}
-                ]
+                'Upper Push (Hypertrophy)': [{n: 'Incline DB Press', s: 3, r: '8-10'}, {n: 'Dips (Chest Focused)', s: 3, r: '10-12'}, {n: 'Overhead Press', s: 3, r: '8-10'}, {n: 'Lateral Raises', s: 3, r: '12-15'}],
+                'Upper Pull (Strength)': [{n: 'Chin-Ups (Weighted)', s: 3, r: '6-8'}, {n: 'Barbell Rows', s: 3, r: '8-10'}, {n: 'Preacher Curls', s: 3, r: '10-12'}, {n: 'Face Pulls', s: 3, r: '15-20'}],
+                'Lower Quad (Endurance)': [{n: 'Back Squat', s: 4, r: '8-10'}, {n: 'Leg Press', s: 3, r: '12-15'}, {n: 'Bulgarian Split Squat', s: 3, r: '10-12'}, {n: 'Calf Raises', s: 4, r: '15-20'}],
+                'Lower Ham (Power)': [{n: 'Deadlift', s: 3, r: '5-8'}, {n: 'Romanian Deadlift', s: 3, r: '10-12'}, {n: 'Leg Curls', s: 3, r: '12-15'}, {n: 'Hanging Leg Raises', s: 3, r: '15-20'}],
+                'Half-Marathon Prep': [{n: 'Zone 2 Foundation Run', s: 1, r: '45 min'}, {n: 'Speed Intervals', s: 6, r: '400m'}]
             };
 
+            // CLOUD FETCH ON OPEN
             useEffect(() => {
-                const w = JSON.parse(localStorage.getItem('p15_w_v8') || '[]');
-                const m = JSON.parse(localStorage.getItem('p15_m_v8') || '[]');
-                setWorkouts(w);
-                setMetrics(m);
+                async function fetchData() {
+                    try {
+                        const response = await fetch(SCRIPT_URL);
+                        const data = await response.json();
+                        setWorkouts(data.workouts || []);
+                        setMetrics(data.metrics || []);
+                    } catch (e) {
+                        console.error("Cloud fetch failed, using local backup", e);
+                        setWorkouts(JSON.parse(localStorage.getItem('p15_w_bk') || '[]'));
+                        setMetrics(JSON.parse(localStorage.getItem('p15_m_bk') || '[]'));
+                    }
+                    setLoading(false);
+                }
+                fetchData();
             }, []);
+
+            const syncToCloud = (type, payload) => {
+                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType: type, ...payload}) });
+            };
 
             const saveWkt = () => {
                 const text = exData.map(e => `${e.name}\n${e.sets.map((s,i) => `S${i+1}: ${s.w || '0'}lb x ${s.r || '0'}`).join(' | ')}`).join('\n\n');
                 const log = { type: activeWkt, date: new Date().toLocaleDateString(), content: text };
                 const updated = [log, ...workouts];
-                const streak = [...new Set(updated.map(w => w.date))].length;
-                if (milestones[streak]) setShowMilestone(streak);
                 setWorkouts(updated);
-                localStorage.setItem('p15_w_v8', JSON.stringify(updated));
+                localStorage.setItem('p15_w_bk', JSON.stringify(updated));
+                syncToCloud('lift', log);
                 setActiveWkt(null); setTab('history');
-                if(SCRIPT_URL.includes('http')) fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'lift', ...log}) });
             };
 
             const saveMetric = () => {
                 const w = document.getElementById('w-val').value, bf = document.getElementById('bf-val').value;
                 if(!w && !bf) return;
-                const newM = [{w: parseFloat(w)||0, bf: parseFloat(bf)||0, date:new Date().toLocaleDateString()}, ...metrics];
-                setMetrics(newM);
-                localStorage.setItem('p15_m_v8', JSON.stringify(newM));
-                document.getElementById('w-val').value = ''; document.getElementById('bf-val').value = '';
+                const log = { w: parseFloat(w)||0, bf: parseFloat(bf)||0, date: new Date().toLocaleDateString() };
+                const updated = [log, ...metrics];
+                setMetrics(updated);
+                localStorage.setItem('p15_m_bk', JSON.stringify(updated));
+                syncToCloud('metric', {weight: log.w, bodyfat: log.bf, date: log.date});
+                setTab('dashboard');
             };
 
             const stats = (() => {
-                const latest = metrics[0] || {w:0, bf:0};
-                const initial = metrics[metrics.length - 1] || {w:0, bf:0};
-                return { w: latest.w, bf: latest.bf, wD: (initial.w - latest.w).toFixed(1), bfD: (initial.bf - latest.bf).toFixed(1), s: [...new Set(workouts.map(w => w.date))].length };
+                const latest = metrics[0] || {w:0, bf:0}, initial = metrics[metrics.length - 1] || {w:0, bf:0};
+                const uniqueDays = [...new Set(workouts.map(w => w.date))];
+                return { w: latest.w, bf: latest.bf, wD: (initial.w - latest.w).toFixed(1), bfD: (initial.bf - latest.bf).toFixed(1), s: uniqueDays.length };
             })();
 
-            return h('div', { className: 'max-w-md mx-auto p-4' },
-                showMilestone && h('div', { className: 'fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center p-6 text-center', onClick: () => setShowMilestone(null) },
-                    h('div', { className: 'glass p-8 rounded-3xl border-2 border-blue-500' },
-                        h('i', { className: `fas ${milestones[showMilestone].icon} text-6xl text-blue-500 mb-4 streak-fire` }),
-                        h('h2', { className: 'text-2xl font-black mb-2' }, milestones[showMilestone].title),
-                        h('p', { className: 'text-4xl font-black text-blue-400 mb-4' }, showMilestone, " DAYS"),
-                        h('p', { className: 'text-sm text-slate-300 italic' }, milestones[showMilestone].msg)
-                    )
-                ),
+            if (loading) return h('div', {className: 'h-screen flex items-center justify-center bg-[#020617]'}, h('div', {className: 'text-center'}, h('i', {className: 'fas fa-cloud text-blue-500 text-5xl mb-4 loading-pulse'}), h('p', {className: 'text-xs font-black uppercase tracking-widest text-slate-500'}, "Fetching Scientific Data...")));
 
+            return h('div', { className: 'max-w-md mx-auto p-4' },
                 h('div', { className: 'text-center py-6' },
                     h('h1', { className: 'text-4xl font-black italic accent-text' }, 'PHASE 15'),
-                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-widest' }, 'Target: 15% Body Fat')
-                ),
-
-                tab === 'history' && h('div', { className: 'grid grid-cols-3 gap-2 mb-6' },
-                    [{l:'Streak', v:stats.s, i:'fa-fire', c:'text-orange-500 streak-fire'}, {l:'Weight', v:stats.w, i:'fa-weight-scale', c:'text-blue-500'}, {l:'Body Fat', v:stats.bf+'%', i:'fa-percent', c:'text-emerald-500'}, {l:'W-Drop', v:stats.wD, i:'fa-arrow-down', c:'text-blue-400'}, {l:'BF-Drop', v:stats.bfD+'%', i:'fa-droplet-slash', c:'text-emerald-400'}, {l:'Logs', v:workouts.length, i:'fa-clipboard-check', c:'text-slate-400'}].map(s => 
-                        h('div', { key: s.l, className: 'glass p-3 rounded-xl text-center' }, h('i', { className: `fas ${s.i} ${s.c} text-[10px] mb-1` }), h('p', { className: 'text-[8px] uppercase font-bold text-slate-500' }, s.l), h('p', { className: 'text-sm font-black' }, s.v))
-                    )
+                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-widest' }, 'Cloud Sync: Active')
                 ),
 
                 h('div', { className: 'flex mb-6 glass rounded-xl overflow-hidden' },
-                    ['history', 'plan', 'workout', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
+                    ['dashboard', 'plan', 'history', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
+                ),
+
+                tab === 'dashboard' && h('div', { className: 'space-y-4' },
+                    h('div', { className: 'grid grid-cols-3 gap-2' },
+                        [{l:'Streak', v:stats.s, i:'fa-fire', c:'text-orange-500'}, {l:'Weight', v:stats.w, i:'fa-weight-scale', c:'text-blue-500'}, {l:'Body Fat', v:stats.bf+'%', i:'fa-percent', c:'text-emerald-500'}].map(s => 
+                            h('div', { key: s.l, className: 'glass p-3 rounded-xl text-center' }, h('i', { className: `fas ${s.i} ${s.c} text-[10px] mb-1` }), h('p', { className: 'text-[8px] uppercase font-bold text-slate-500' }, s.l), h('p', { className: 'text-sm font-black' }, s.v))
+                        )
+                    ),
+                    h('div', { className: 'glass p-6 rounded-3xl border-l-4 border-blue-500' },
+                        h('p', { className: 'text-[10px] font-black text-slate-500 uppercase mb-2' }, 'Recomp Progress'),
+                        h('div', { className: 'flex justify-between' },
+                            h('div', null, h('p', { className: 'text-2xl font-black text-emerald-400' }, stats.bfD, '%'), h('p', { className: 'text-[9px] uppercase font-bold text-slate-500' }, 'Fat Reduction')),
+                            h('div', { className: 'text-right' }, h('p', { className: 'text-2xl font-black text-blue-400' }, stats.wD, ' lbs'), h('p', { className: 'text-[9px] uppercase font-bold text-slate-500' }, 'Weight Shift'))
+                        )
+                    )
                 ),
 
                 tab === 'plan' && h('div', { className: 'space-y-3' },
@@ -151,10 +136,10 @@
                             h('input', { placeholder: 'REPS', type: 'number', className: 'input-box flex-1', value: set.r, onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; setExData(n); }})
                         ))
                     )),
-                    h('button', { onClick: saveWkt, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase' }, 'Save Session')
-                ) : h('p', { className: 'text-center py-20 text-slate-500 italic' }, "Start from PLAN tab.")),
+                    h('button', { onClick: saveWkt, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase' }, 'Sync Workout')
+                ) : h('p', { className: 'text-center py-20 text-slate-500 italic' }, "Start from PLAN.")),
 
-                tab === 'history' && h('div', { className: 'space-y-4' },
+                tab === 'history' && h('div', { className: 'space-y-4 pb-20' },
                     workouts.map((w, i) => h('div', { key: i, className: 'glass p-5 rounded-2xl border-l-4 border-blue-600' },
                         h('div', { className: 'flex justify-between mb-3' }, h('span', { className: 'font-black text-blue-400 text-xs uppercase' }, w.type), h('span', { className: 'text-[10px] text-slate-500 font-bold' }, w.date)),
                         h('pre', { className: 'text-[11px] text-slate-300 font-sans leading-relaxed' }, w.content)
@@ -163,20 +148,18 @@
 
                 tab === 'metrics' && h('div', { className: 'space-y-6 pb-20' },
                     h('div', { className: 'glass p-6 rounded-3xl space-y-4' },
-                        h('p', { className: 'text-xs font-black text-slate-500 uppercase text-center' }, 'Log New Vitals'),
                         h('div', { className: 'flex gap-2' },
                             h('input', { id: 'w-val', type: 'number', placeholder: 'Weight', className: 'input-box flex-1' }),
                             h('input', { id: 'bf-val', type: 'number', placeholder: 'BF %', className: 'input-box flex-1' })
                         ),
-                        h('button', { onClick: saveMetric, className: 'w-full bg-emerald-600 p-4 rounded-2xl font-black uppercase' }, 'Save Entry')
+                        h('button', { onClick: saveMetric, className: 'w-full bg-emerald-600 p-4 rounded-2xl font-black uppercase' }, 'Update Cloud')
                     ),
                     h('div', { className: 'glass rounded-3xl overflow-hidden' },
-                        h('div', { className: 'bg-slate-800/50 p-4' }, h('p', { className: 'text-[10px] font-black uppercase tracking-widest text-slate-400' }, 'Recent Measurements')),
                         metrics.map((m, i) => h('div', { key: i, className: 'vitals-row p-4 flex justify-between items-center' },
                             h('div', null, h('p', { className: 'text-xs font-black' }, m.date)),
                             h('div', { className: 'flex gap-4' },
-                                h('div', {className:'text-center'}, h('p', {className:'text-[8px] text-slate-500 uppercase font-bold'}, 'Weight'), h('p', {className:'text-sm font-black text-blue-400'}, m.w)),
-                                h('div', {className:'text-center'}, h('p', {className:'text-[8px] text-slate-500 uppercase font-bold'}, 'BF %'), h('p', {className:'text-sm font-black text-emerald-400'}, m.bf+'%'))
+                                h('div', {className:'text-center'}, h('p', {className:'text-sm font-black text-blue-400'}, m.w)),
+                                h('div', {className:'text-center'}, h('p', {className:'text-sm font-black text-emerald-400'}, m.bf+'%'))
                             )
                         ))
                     )
