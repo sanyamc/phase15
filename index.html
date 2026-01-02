@@ -3,177 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PHASE 15 | Elite Tracker</title>
+    <title>PHASE 15 | LBS Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
         .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
-        .input-dark { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; }
+        .input-dark { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; padding: 12px; width: 100%; }
         .accent-gradient { background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%); }
-        .timer-warning { color: #ef4444; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .tab-active { border-bottom: 4px solid #10b981; color: #10b981; }
     </style>
 </head>
 <body class="min-h-screen pb-24">
 
-    <div class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
-        <div class="flex justify-between items-center max-w-md mx-auto">
-            <div>
-                <h1 class="text-xl font-black italic text-emerald-500 uppercase tracking-tighter">Phase 15</h1>
-                <p id="clock" class="text-[10px] text-slate-500 font-bold uppercase"></p>
-            </div>
-            <div class="text-right">
-                <div id="timer-display" class="text-2xl font-black tabular-nums text-white">60:00</div>
-                <button onclick="toggleTimer()" id="timer-btn" class="text-[10px] bg-emerald-600 px-2 py-1 rounded font-bold uppercase">Start Session</button>
-            </div>
-        </div>
-    </div>
+    <header class="p-6">
+        <h1 class="text-3xl font-black tracking-tighter italic text-emerald-500 uppercase">PHASE 15</h1>
+        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Tracking in LBS | Science-Backed</p>
+    </header>
 
-    <main class="max-w-md mx-auto p-4 space-y-6">
-        
-        <div class="flex justify-around border-b border-slate-800 mb-2">
-            <button onclick="switchTab('lift')" id="t-lift" class="pb-2 font-bold text-xs text-emerald-400 border-b-2 border-emerald-400 uppercase">Training</button>
-            <button onclick="switchTab('history')" id="t-history" class="pb-2 font-bold text-xs text-slate-500 uppercase">History</button>
-            <button onclick="switchTab('stats')" id="t-stats" class="pb-2 font-bold text-xs text-slate-500 uppercase">Metrics</button>
-        </div>
+    <nav class="flex px-6 space-x-6 mb-6 border-b border-slate-800">
+        <button onclick="switchTab('lift')" id="t-lift" class="pb-2 font-bold text-xs tab-active uppercase">Workout</button>
+        <button onclick="switchTab('history')" id="t-history" class="pb-2 font-bold text-xs text-slate-500 uppercase">History</button>
+        <button onclick="switchTab('stats')" id="t-stats" class="pb-2 font-bold text-xs text-slate-500 uppercase">Metrics</button>
+    </nav>
 
+    <main class="px-4">
         <div id="view-lift" class="space-y-4">
             <div class="flex gap-2">
                 <select id="workout-select" class="input-dark font-bold text-emerald-400" onchange="renderWorkout()">
-                    <option value="">Load 6AM Protocol...</option>
-                    <option value="upperA">Upper A (Strength/Push)</option>
-                    <option value="lowerA">Lower A (Quads/Calf)</option>
-                    <option value="upperB">Upper B (Hypertrophy/Pull)</option>
-                    <option value="lowerB">Lower B (Posterior/Hams)</option>
+                    <option value="">Load Split...</option>
+                    <option value="upperA">Upper A</option>
+                    <option value="lowerA">Lower A</option>
                 </select>
-                <button onclick="addNewExercise()" class="bg-slate-700 px-4 rounded-lg font-black text-xl hover:bg-slate-600">+</button>
+                <button onclick="addNewExercise()" class="bg-slate-700 px-4 rounded-lg font-black text-xl">+</button>
             </div>
             
             <div id="exercise-container" class="space-y-3"></div>
             
-            <button onclick="submitData('Lift')" class="w-full accent-gradient py-4 rounded-xl font-black uppercase shadow-lg shadow-emerald-900/40 active:scale-95 transition-transform">Sync to Sheets</button>
+            <button onclick="submitData('Lift')" class="w-full accent-gradient py-4 rounded-xl font-black uppercase shadow-lg shadow-emerald-900/20">Sync to Sheets</button>
         </div>
 
         <div id="view-history" class="hidden space-y-3">
-             <button onclick="fetchHistory()" class="w-full bg-slate-800 py-3 rounded-lg font-bold text-xs uppercase mb-2">Refresh Global Logs</button>
-             <div id="history-list" class="space-y-2"></div>
+            <button onclick="fetchHistory()" class="w-full bg-slate-800 py-2 rounded font-bold text-xs uppercase mb-2">Refresh Logs</button>
+            <div id="history-list" class="space-y-2">
+                <p class="text-slate-500 text-center text-sm italic">Click refresh to load logs...</p>
+            </div>
         </div>
 
         <div id="view-stats" class="hidden space-y-4">
             <div class="glass-card p-6">
-                <h3 class="font-black italic mb-4 uppercase text-sm">Update Body Composition</h3>
                 <input type="number" id="body-wt" placeholder="Weight (lbs)" class="input-dark mb-3">
                 <input type="number" id="body-bf" placeholder="Body Fat %" class="input-dark mb-4">
-                <button onclick="submitData('Stats')" class="w-full bg-slate-700 py-4 rounded-xl font-black uppercase">Log Metric</button>
+                <button onclick="submitData('Stats')" class="w-full bg-slate-700 py-4 rounded-xl font-black uppercase">Update Weight</button>
             </div>
         </div>
     </main>
 
     <script>
-        const scriptURL = 'YOUR_APPS_SCRIPT_URL_HERE';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxOZRymFSVmw6gU6G8I6coN_-hlBF_LTnKND4VO3n_-dVO_qptWTLj9rHX5IYZJw0kM/exec'; 
         
-        // Full Science-Backed Protocols
         const protocols = {
     upperA: [
-        {n: "Barbell Bench Press", r: "3 Sets of 6 to 8 Reps"},
-        {n: "Barbell Bent Over Row", r: "3 Sets of 8 to 10 Reps"},
-        {n: "Dumbbell Overhead Press", r: "3 Sets of 10 to 12 Reps"},
-        {n: "Tricep Dips", r: "3 Sets to Maximum Repetitions"},
-        {n: "Face Pulls", r: "3 Sets of 15 to 20 Reps"}
+        {n: "Bench Press", r: "3 x 6-8", desc: "Heavy Strength"},
+        {n: "Barbell Row", r: "3 x 8-10", desc: "Back Power"},
+        {n: "DB Overhead Press", r: "3 x 10-12", desc: "Shoulders"},
+        {n: "Lat Pulldown", r: "3 x 12", desc: "Width"},
+        {n: "Tricep Pushdowns", r: "3 x 15", desc: "Arms"}
     ],
     lowerA: [
-        {n: "Barbell Back Squat", r: "3 Sets of 6 to 8 Reps"},
-        {n: "Leg Press Machine", r: "3 Sets of 10 to 12 Reps"},
-        {n: "Dumbbell Walking Lunges", r: "3 Sets of 10 Reps Per Leg"},
-        {n: "Seated Calf Raises", r: "4 Sets of 15 Reps"},
-        {n: "Plank Hold", r: "3 Sets of 60 Seconds"}
+        {n: "Back Squat", r: "3 x 6-8", desc: "Quad Focus"},
+        {n: "Walking Lunges", r: "3 x 12/leg", desc: "Glute/Stability"},
+        {n: "Leg Extensions", r: "3 x 15", desc: "Isolation"},
+        {n: "Seated Calf Raise", r: "4 x 15", desc: "Running Prep"},
+        {n: "Plank", r: "3 x 60s", desc: "Core"}
     ],
     upperB: [
-        {n: "Pull Ups", r: "3 Sets to Maximum Repetitions"},
-        {n: "Incline Dumbbell Bench Press", r: "3 Sets of 10 to 12 Reps"},
-        {n: "Seated Cable Row", r: "3 Sets of 12 Reps"},
-        {n: "Dumbbell Lateral Raises", r: "3 Sets of 15 to 20 Reps"},
-        {n: "Dumbbell Bicep Curls", r: "3 Sets of 12 Reps"}
+        {n: "Pull Ups/Assisted", r: "3 x AMRAP", desc: "Back Focus"},
+        {n: "Incline DB Press", r: "3 x 10-12", desc: "Upper Chest"},
+        {n: "Seated Cable Row", r: "3 x 12", desc: "Thickness"},
+        {n: "Lateral Raises", r: "3 x 15-20", desc: "Metabolic Stress"},
+        {n: "Bicep Curls", r: "3 x 12", desc: "Arms"}
     ],
     lowerB: [
-        {n: "Barbell Deadlift", r: "3 Sets of 5 Reps"},
-        {n: "Romanian Deadlift", r: "3 Sets of 10 to 12 Reps"},
-        {n: "Lying Leg Curls", r: "3 Sets of 12 to 15 Reps"},
-        {n: "Standing Calf Raises", r: "4 Sets of 12 Reps"},
-        {n: "Hanging Leg Raises", r: "3 Sets of 15 Reps"}
+        {n: "Deadlift (Hex/Conv)", r: "3 x 5", desc: "Posterior Chain"},
+        {n: "Romanian Deadlift", r: "3 x 10-12", desc: "Hamstrings"},
+        {n: "Leg Curls", r: "3 x 12-15", desc: "Hams Isolation"},
+        {n: "Standing Calf Raise", r: "4 x 12", desc: "Explosive"},
+        {n: "Hanging Leg Raises", r: "3 x 15", desc: "Lower Abs"}
     ]
 };
-
-        // Timer Logic
-        let timeLeft = 3600; // 60 minutes
-        let timerId = null;
-
-        function toggleTimer() {
-            if (timerId) {
-                clearInterval(timerId);
-                timerId = null;
-                document.getElementById('timer-btn').innerText = "Resume";
-            } else {
-                timerId = setInterval(() => {
-                    timeLeft--;
-                    updateTimerDisplay();
-                    if (timeLeft <= 0) clearInterval(timerId);
-                }, 1000);
-                document.getElementById('timer-btn').innerText = "Pause";
-            }
-        }
-
-        function updateTimerDisplay() {
-            const m = Math.floor(timeLeft / 60);
-            const s = timeLeft % 60;
-            const display = `${m}:${s < 10 ? '0' : ''}${s}`;
-            const el = document.getElementById('timer-display');
-            el.innerText = display;
-            if (timeLeft < 300) el.classList.add('timer-warning');
-        }
-
-        function renderWorkout() {
-            const val = document.getElementById('workout-select').value;
-            const container = document.getElementById('exercise-container');
-            container.innerHTML = '';
-            if(protocols[val]) protocols[val].forEach(ex => createExerciseRow(ex.n, ex.r));
-        }
-
-        function createExerciseRow(name, target) {
-            const div = document.createElement('div');
-            div.className = "glass-card p-4 exercise-row border-l-4 border-emerald-500";
-            div.innerHTML = `
-                <div class="flex justify-between mb-2">
-                    <input type="text" value="${name}" class="bg-transparent font-black uppercase text-emerald-400 text-xs w-2/3 focus:outline-none">
-                    <span class="text-[10px] text-slate-500 font-bold">${target}</span>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="number" placeholder="LBS" class="input-dark weight-input text-center">
-                    <input type="number" placeholder="REPS" class="input-dark rep-input text-center">
-                </div>`;
-            document.getElementById('exercise-container').appendChild(div);
-        }
-
-        function addNewExercise() { createExerciseRow("Alternative", "3 x 10"); }
 
         function switchTab(tab) {
             ['lift', 'history', 'stats'].forEach(t => {
                 document.getElementById('view-'+t).classList.add('hidden');
-                document.getElementById('t-'+t).className = "pb-2 font-bold text-xs text-slate-500 uppercase";
+                document.getElementById('t-'+t).classList.replace('text-emerald-400', 'text-slate-500');
+                document.getElementById('t-'+t).classList.remove('tab-active');
             });
             document.getElementById('view-'+tab).classList.remove('hidden');
-            document.getElementById('t-'+tab).className = "pb-2 font-bold text-xs text-emerald-400 border-b-2 border-emerald-400 uppercase";
+            document.getElementById('t-'+tab).classList.replace('text-slate-500', 'text-emerald-400');
+            document.getElementById('t-'+tab).classList.add('tab-active');
         }
 
-        // Live Clock
-        setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        }, 1000);
+        function renderWorkout() {
+            const protocol = protocols[document.getElementById('workout-select').value];
+            const container = document.getElementById('exercise-container');
+            container.innerHTML = '';
+            if(protocol) protocol.forEach(ex => createExerciseRow(ex.n, ex.r));
+        }
+
+        function createExerciseRow(name = "New Exercise", target = "8-12") {
+            const container = document.getElementById('exercise-container');
+            const div = document.createElement('div');
+            div.className = "glass-card p-4 exercise-row";
+            div.innerHTML = `
+                <input type="text" value="${name}" class="bg-transparent font-black uppercase text-emerald-500 text-xs mb-2 w-full focus:outline-none">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" placeholder="LBS" class="input-dark weight-input">
+                    <input type="number" placeholder="REPS" class="input-dark rep-input">
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function addNewExercise() { createExerciseRow(); }
+
+        async function fetchHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = "Fetching...";
+            try {
+                const response = await fetch(`${scriptURL}?read=true`);
+                const logs = await response.json();
+                list.innerHTML = logs.map(row => `
+                    <div class="glass-card p-3 text-[10px]">
+                        <span class="text-emerald-500 font-bold">${new Date(row[0]).toLocaleDateString()}</span> | 
+                        <span class="text-slate-300 font-bold uppercase">${row[1]}</span>
+                        <p class="text-slate-400 mt-1">${row[2]}</p>
+                    </div>
+                `).join('');
+            } catch (e) { list.innerHTML = "Error loading history."; }
+        }
 
         async function submitData(type) {
-            // Re-use your existing POST logic here...
-            alert("Syncing " + type + " to your Google Sheet...");
+            let content = "";
+            if (type === 'Lift') {
+                const rows = document.querySelectorAll('.exercise-row');
+                content = Array.from(rows).map(row => {
+                    const n = row.querySelector('input[type="text"]').value;
+                    const w = row.querySelector('.weight-input').value;
+                    const r = row.querySelector('.rep-input').value;
+                    return `${n}: ${w}lbs x ${r}`;
+                }).join(' | ');
+            } else {
+                content = `Weight: ${document.getElementById('body-wt').value}lbs | BF: ${document.getElementById('body-bf').value}%`;
+            }
+
+            // Sync Logic
+            await fetch(scriptURL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ type: type, content: content })
+            });
+            alert("Data Synced.");
         }
     </script>
 </body>
