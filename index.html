@@ -3,190 +3,120 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PHASE 15 | Recomp Engine</title>
+  <title>PHASE 15 | Body Recomp Engine</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background: #0f172a; min-height: 100vh; color: white; }
+    body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; min-height: 100vh; }
     .glass-card { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-    .input-dark { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; padding: 10px; width: 100%; text-align: center; }
+    .input-dark { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; padding: 12px; width: 100%; text-align: center; }
     .tab-active { border-bottom: 3px solid #10b981; color: #10b981; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .timer-alert { color: #ef4444; animation: pulse 1s infinite; }
+    .progress-fill { height: 100%; transition: width 0.5s ease-in-out; border-radius: 4px; }
   </style>
 </head>
 <body>
   <div id="app"></div>
-
   <script type="module">
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGuyYC-vccHDsEnuQgdC9gkuF8P7gksVEuRf82Z7kBXC7KVn4JnPZYO3R79fjf_fYh/exec'; // ⚠️ UPDATE THIS
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdnhWN3Hq5CySfu2GSse8FYv2_OksqhqQgSvI57IbLseXw4t7r8JoHbuucegB-489X/exec'; 
     const { createElement: e, useState, useEffect } = React;
 
     function App() {
       const [activeTab, setActiveTab] = useState('workout');
-      const [historyData, setHistoryData] = useState([]);
+      const [saveStatus, setSaveStatus] = useState('');
       const [currentWorkout, setCurrentWorkout] = useState(null);
       const [exercises, setExercises] = useState([]);
-      const [saveStatus, setSaveStatus] = useState('');
-      const [timeLeft, setTimeLeft] = useState(3600);
-      const [timerActive, setTimerActive] = useState(false);
+      const [history, setHistory] = useState([]);
+      const [macros, setMacros] = useState({ p: 0, c: 0, f: 0 });
+      const [metrics, setMetrics] = useState({ weight: '', bf: '' });
+      
+      const targets = { p: 180, c: 200, f: 60 }; // Standard recomp targets
 
       const workoutTemplates = {
-        'Upper Body Push': [
-          { name: 'Barbell Bench Press', sets: 3, reps: '6-8' },
-          { name: 'Dumbbell Overhead Press', sets: 3, reps: '8-10' },
-          { name: 'Incline Dumbbell Press', sets: 3, reps: '10-12' },
-          { name: 'Tricep Dips', sets: 3, reps: 'Maximum' }
-        ],
-        'Upper Body Pull': [
-          { name: 'Pull Ups', sets: 3, reps: 'Maximum' },
-          { name: 'Barbell Bent Over Row', sets: 3, reps: '8-10' },
-          { name: 'Seated Cable Rows', sets: 3, reps: '10-12' },
-          { name: 'Dumbbell Bicep Curls', sets: 3, reps: '12-15' }
-        ],
-        'Lower Body Anterior': [
-          { name: 'Barbell Back Squat', sets: 3, reps: '6-8' },
-          { name: 'Leg Press', sets: 3, reps: '12-15' },
-          { name: 'Leg Extensions', sets: 3, reps: '12-15' },
-          { name: 'Seated Calf Raises', sets: 4, reps: '15' }
-        ],
-        'Lower Body Posterior': [
-          { name: 'Barbell Deadlift', sets: 3, reps: '5' },
-          { name: 'Romanian Deadlift', sets: 3, reps: '10-12' },
-          { name: 'Lying Leg Curls', sets: 3, reps: '12-15' },
-          { name: 'Hanging Leg Raises', sets: 3, reps: '15' }
-        ],
-        'Run - Easy': [{ name: 'Zone 2 Cardio', sets: 1, reps: '45 min' }],
-        'Run - Long': [{ name: 'Endurance Run', sets: 1, reps: '60-90 min' }]
+        'Upper Body Push': [{ name: 'Barbell Bench Press', sets: 3, reps: '6-8' }, { name: 'Dumbbell Overhead Press', sets: 3, reps: '8-10' }],
+        'Upper Body Pull': [{ name: 'Pull Ups', sets: 3, reps: 'Maximum' }, { name: 'Barbell Row', sets: 3, reps: '8-10' }],
+        'Lower Body Anterior': [{ name: 'Barbell Back Squat', sets: 3, reps: '6-8' }, { name: 'Leg Press', sets: 3, reps: '12-15' }],
+        'Lower Body Posterior': [{ name: 'Barbell Deadlift', sets: 3, reps: '5' }, { name: 'Romanian Deadlift', sets: 3, reps: '10-12' }]
       };
 
-      useEffect(() => {
-        let interval = null;
-        if (timerActive && timeLeft > 0) {
-          interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-        } else { clearInterval(interval); }
-        return () => clearInterval(interval);
-      }, [timerActive, timeLeft]);
-
-      useEffect(() => {
-        if (activeTab === 'history') fetchHistory();
-      }, [activeTab]);
+      useEffect(() => { if (activeTab === 'history') fetchHistory(); }, [activeTab]);
 
       const fetchHistory = async () => {
-        setSaveStatus('Loading History...');
+        setSaveStatus('Loading...');
         try {
-          const res = await fetch(`${SCRIPT_URL}?action=getWorkouts`);
+          const res = await fetch(`${SCRIPT_URL}?action=getHistory`);
           const data = await res.json();
-          setHistoryData(data);
+          setHistory(data);
           setSaveStatus('');
-        } catch (err) { setSaveStatus('History Load Failed'); }
+        } catch (err) { setSaveStatus('Load Error'); }
       };
 
-      const startWorkout = (type) => {
-        setTimeLeft(3600);
-        setTimerActive(true);
-        setCurrentWorkout({ type, date: new Date().toLocaleDateString() });
-        setExercises(workoutTemplates[type].map(ex => ({
-          ...ex, sets_data: Array(ex.sets || 1).fill().map(() => ({ weight: '', reps: '' }))
-        })));
-      };
-
-      const updateSet = (exIdx, setIdx, field, val) => {
-        const updated = [...exercises];
-        updated[exIdx].sets_data[setIdx][field] = val;
-        setExercises(updated);
-      };
-
-      const finishWorkout = async () => {
-        setTimerActive(false);
-        const content = exercises.map(ex => 
-          `${ex.name}: ${ex.sets_data.map(s => `${s.weight}lbs x ${s.reps}`).join(' | ')}`
-        ).join('\n');
-        
+      const syncData = async (payload) => {
         setSaveStatus('Syncing...');
         try {
-          await fetch(SCRIPT_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', 
-            body: JSON.stringify({ type: currentWorkout.type, content: content, notes: `Remaining: ${Math.floor(timeLeft/60)}m` }) 
-          });
-          setSaveStatus('✓ Saved!');
-          setTimeout(() => { setSaveStatus(''); setCurrentWorkout(null); setActiveTab('history'); }, 2000);
-        } catch (e) { setSaveStatus('Sync Error'); }
+          await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+          setSaveStatus('✓ Saved');
+          setTimeout(() => setSaveStatus(''), 2000);
+        } catch (e) { setSaveStatus('Sync Failed'); }
       };
 
-      return e('div', { className: 'max-w-md mx-auto min-h-screen pb-20' },
-        e('header', { className: 'p-6 flex justify-between items-center bg-slate-900 sticky top-0 z-50' },
+      return e('div', { className: 'max-w-md mx-auto p-4' },
+        e('header', { className: 'mb-6 flex justify-between items-center' },
           e('div', null,
-            e('h1', { className: 'text-2xl font-black italic text-emerald-500 uppercase tracking-tighter' }, 'Phase 15'),
-            e('p', { className: 'text-[10px] text-slate-500 font-bold uppercase' }, '6:00 AM Scientist Mode')
+            e('h1', { className: 'text-2xl font-black italic text-emerald-500 uppercase' }, 'Phase 15'),
+            e('p', { className: 'text-[10px] text-slate-500 font-bold uppercase' }, 'Goal: 165 lbs Target')
           ),
-          e('div', { className: 'text-right' },
-            e('p', { className: `text-2xl font-black tabular-nums ${timeLeft < 300 ? 'timer-alert' : ''}` }, 
-              `${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')}`),
-            e('button', { onClick: () => setTimerActive(!timerActive), className: 'text-[10px] bg-slate-700 px-2 py-1 rounded font-bold' }, timerActive ? 'PAUSE' : 'START')
-          )
+          saveStatus && e('p', { className: 'text-xs text-emerald-400 font-bold' }, saveStatus)
         ),
 
-        e('nav', { className: 'flex justify-around border-b border-slate-800 bg-slate-900' },
-          ['workout', 'history', 'metrics'].map(tab => 
+        e('nav', { className: 'flex justify-around mb-6 border-b border-slate-800 bg-slate-900 sticky top-0 z-50' },
+          ['workout', 'fuel', 'history', 'metrics'].map(tab => 
             e('button', {
-              key: tab,
-              onClick: () => setActiveTab(tab),
-              className: `py-4 px-6 text-xs font-bold uppercase transition ${activeTab === tab ? 'tab-active' : 'text-slate-500'}`
+              key: tab, onClick: () => setActiveTab(tab),
+              className: `py-4 px-2 text-[10px] font-bold uppercase ${activeTab === tab ? 'tab-active' : 'text-slate-500'}`
             }, tab)
           )
         ),
 
-        e('main', { className: 'p-4' },
-          activeTab === 'workout' && (
-            !currentWorkout ? (
-              e('div', { className: 'space-y-3' },
-                Object.keys(workoutTemplates).map(type => 
-                  e('button', { key: type, onClick: () => startWorkout(type), className: 'w-full glass-card p-5 rounded-xl text-left border-l-4 border-emerald-500' },
-                    e('h3', { className: 'font-black uppercase text-sm' }, type),
-                    e('p', { className: 'text-xs text-slate-400' }, 'Click to Start Session')
-                  )
-                )
-              )
-            ) : (
-              e('div', { className: 'space-y-4' },
-                exercises.map((ex, exIdx) => 
-                  e('div', { key: exIdx, className: 'glass-card p-4 rounded-xl' },
-                    e('p', { className: 'text-xs font-black uppercase text-emerald-400 mb-3' }, ex.name),
-                    ex.sets_data.map((set, setIdx) => 
-                      e('div', { key: setIdx, className: 'flex gap-2 mb-2' },
-                        e('input', { type: 'number', placeholder: 'LBS', className: 'input-dark', onChange: (v) => updateSet(exIdx, setIdx, 'weight', v.target.value) }),
-                        e('input', { type: 'number', placeholder: 'REPS', className: 'input-dark', onChange: (v) => updateSet(exIdx, setIdx, 'reps', v.target.value) })
-                      )
-                    )
-                  )
-                ),
-                e('button', { onClick: finishWorkout, className: 'w-full bg-emerald-600 py-4 rounded-xl font-black uppercase' }, saveStatus || 'Complete Session')
-              )
-            )
-          ),
-
-          activeTab === 'history' && (
-            e('div', { className: 'space-y-3' },
-              saveStatus && e('p', { className: 'text-center text-xs animate-pulse' }, saveStatus),
-              historyData.map((log, i) => 
-                e('div', { key: i, className: 'glass-card p-4 rounded-xl' },
-                  e('div', { className: 'flex justify-between mb-2 text-[10px] font-bold uppercase' },
-                    e('span', { className: 'text-emerald-500' }, new Date(log.date).toLocaleDateString()),
-                    e('span', { className: 'text-slate-500' }, log.type)
-                  ),
-                  e('pre', { className: 'text-[10px] text-slate-300 whitespace-pre-wrap font-sans' }, log.content)
-                )
-              )
+        activeTab === 'workout' && (!currentWorkout ? (
+          e('div', { className: 'space-y-3' },
+            Object.keys(workoutTemplates).map(type => 
+              e('button', { key: type, onClick: () => setCurrentWorkout({type}), className: 'w-full glass-card p-5 rounded-xl text-left border-l-4 border-emerald-500' }, type)
             )
           )
+        ) : (
+          e('div', { className: 'space-y-4' },
+            e('button', { onClick: () => syncData({dataType: 'lift', type: currentWorkout.type, content: 'Session Complete'}), className: 'w-full bg-emerald-600 py-4 rounded-xl font-bold' }, 'Sync Session')
+          )
+        )),
+
+        activeTab === 'fuel' && e('div', { className: 'space-y-6' },
+          e('div', { className: 'glass-card p-6 rounded-2xl' },
+            [{l:'Protein', k:'p', c:'bg-blue-500'}, {l:'Carbs', k:'c', c:'bg-amber-500'}, {l:'Fats', k:'f', c:'bg-rose-500'}].map(m => e('div', { className: 'mb-6', key: m.k },
+              e('div', { className: 'flex justify-between text-[10px] font-bold uppercase mb-1' }, e('span', null, m.l), e('span', null, `${macros[m.k]}g / ${targets[m.k]}g`)),
+              e('div', { className: 'bg-slate-800 h-2 rounded-full overflow-hidden mb-2' }, 
+                e('div', { className: `progress-fill ${m.c}`, style: { width: `${Math.min((macros[m.k]/targets[m.k])*100, 100)}%` } })),
+              e('input', { type: 'number', className: 'input-dark text-xs h-10', placeholder: `Add ${m.l}`, onChange: (v) => setMacros({...macros, [m.k]: v.target.value}) })
+            )),
+            e('button', { className: 'w-full bg-emerald-600 py-4 rounded-xl font-bold mt-4', onClick: () => syncData({dataType: 'food', ...macros, cal: (macros.p*4 + macros.c*4 + macros.f*9)}) }, 'Log Daily Fuel')
+          )
+        ),
+
+        activeTab === 'metrics' && e('div', { className: 'glass-card p-6 rounded-xl space-y-4' },
+          e('input', { type: 'number', className: 'input-dark', placeholder: 'Current Weight (lbs)', onChange: (v) => setMetrics({...metrics, weight: v.target.value}) }),
+          e('input', { type: 'number', className: 'input-dark', placeholder: 'Body Fat %', onChange: (v) => setMetrics({...metrics, bf: v.target.value}) }),
+          e('button', { className: 'w-full bg-slate-700 py-4 rounded-xl font-bold', onClick: () => syncData({dataType: 'metrics', ...metrics}) }, 'Update Metrics')
+        ),
+
+        activeTab === 'history' && e('div', { className: 'space-y-3' },
+          history.map((log, i) => e('div', { key: i, className: 'glass-card p-4 rounded-xl text-xs' },
+            e('div', { className: 'flex justify-between mb-2 text-emerald-400 font-bold' }, e('span', null, new Date(log.date).toLocaleDateString()), e('span', null, log.type)),
+            e('p', { className: 'text-slate-300' }, log.content)
+          ))
         )
       );
     }
-
     ReactDOM.createRoot(document.getElementById('app')).render(e(App));
   </script>
 </body>
