@@ -11,9 +11,10 @@
     <style>
         body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; min-height: 100vh; }
         .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-        .input-dark { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 12px; padding: 12px; width: 100%; text-align: center; }
+        .input-dark { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 12px; padding: 10px; width: 100%; text-align: center; }
         .tab-active { background: #2563eb !important; color: white !important; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); }
-        .progress-fill { height: 100%; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 99px; }
+        .progress-fill { height: 100%; transition: width 0.8s ease; border-radius: 99px; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body class="bg-slate-950">
@@ -26,31 +27,34 @@
         function App() {
             const [activeTab, setActiveTab] = useState('history');
             const [workouts, setWorkouts] = useState([]);
-            const [metrics, setMetrics] = useState([]); // Initialized as empty array
+            const [metrics, setMetrics] = useState([]);
             const [macros, setMacros] = useState({ p: 0, c: 0, f: 0 });
+            const [currentWorkout, setCurrentWorkout] = useState(null);
+            const [activeExercises, setActiveExercises] = useState([]);
             const [status, setStatus] = useState('');
 
             const targets = { p: 180, c: 200, f: 65 };
 
-            // Secure Loading Logic
+            const templates = {
+                'Upper Push': [{n: 'Bench Press', s: 3}, {n: 'Overhead Press', s: 3}, {n: 'Lateral Raises', s: 3}],
+                'Upper Pull': [{n: 'Deadlifts', s: 3}, {n: 'Pull Ups', s: 3}, {n: 'Bicep Curls', s: 3}],
+                'Lower Quad': [{n: 'Back Squat', s: 4}, {n: 'Leg Press', s: 3}, {n: 'Calf Raises', s: 3}],
+                'Lower Ham': [{n: 'RDL', s: 4}, {n: 'Leg Curls', s: 3}, {n: 'Glute Bridges', s: 3}],
+                'Zone 2 Run': [{n: 'Aerobic Run', s: 1}]
+            };
+
             useEffect(() => {
                 const savedW = localStorage.getItem('p15_workouts');
                 const savedM = localStorage.getItem('p15_metrics');
-                const savedF = localStorage.getItem('p15_macros');
-                
-                if (savedW) { try { setWorkouts(JSON.parse(savedW)); } catch(e) { setWorkouts([]); } }
-                if (savedM) { try { setMetrics(JSON.parse(savedM)); } catch(e) { setMetrics([]); } }
-                if (savedF) { try { setMacros(JSON.parse(savedF)); } catch(e) { setMacros({p:0,c:0,f:0}); } }
-                
+                if (savedW) setWorkouts(JSON.parse(savedW));
+                if (savedM) setMetrics(JSON.parse(savedM));
                 fetchHistory();
             }, []);
 
-            // Secure Saving Logic
             useEffect(() => {
                 localStorage.setItem('p15_workouts', JSON.stringify(workouts));
-                localStorage.setItem('p15_metrics', JSON.stringify(metrics || []));
-                localStorage.setItem('p15_macros', JSON.stringify(macros));
-            }, [workouts, metrics, macros]);
+                localStorage.setItem('p15_metrics', JSON.stringify(metrics));
+            }, [workouts, metrics]);
 
             const fetchHistory = async () => {
                 if (!SCRIPT_URL.includes('http')) return;
@@ -61,18 +65,40 @@
                 } catch (err) { console.log("Cloud offline"); }
             };
 
-            const logAction = async (payload) => {
+            const startWorkout = (type) => {
+                const ex = templates[type].map(t => ({
+                    name: t.n,
+                    sets: Array(t.s).fill().map(() => ({ w: '', r: '' }))
+                }));
+                setCurrentWorkout(type);
+                setActiveExercises(ex);
+            };
+
+            const finishWorkout = async () => {
+                const summary = activeExercises.map(ex => 
+                    `${ex.name.toUpperCase()}\n` + ex.sets.map((s, i) => `Set ${i+1}: ${s.w}lbs x ${s.r}`).join('\n')
+                ).join('\n\n');
+
+                const newLog = { type: currentWorkout, date: new Date().toLocaleDateString(), content: summary };
+                setWorkouts([newLog, ...workouts]);
+                setCurrentWorkout(null);
+                setActiveTab('history');
+
                 setStatus('Syncing...');
                 try {
-                    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                    setStatus('✓ Success');
-                    setTimeout(() => setStatus(''), 2000);
-                } catch (e) { setStatus('Local Saved'); }
+                    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ dataType: 'lift', ...newLog }) });
+                    setStatus('✓ Saved');
+                } catch (e) { setStatus('Local Only'); }
+            };
+
+            const updateSet = (exIdx, setIdx, field, val) => {
+                const updated = [...activeExercises];
+                updated[exIdx].sets[setIdx][field] = val;
+                setActiveExercises(updated);
             };
 
             const stats = useMemo(() => {
-                const mArr = Array.isArray(metrics) ? metrics : [];
-                const weights = mArr.filter(m => m.type === 'weight');
+                const weights = metrics.filter(m => m.type === 'weight');
                 const curr = weights[0]?.value || 0;
                 const start = weights[weights.length - 1]?.value || 0;
                 return {
@@ -86,103 +112,49 @@
             return e('div', { className: 'max-w-md mx-auto p-5 pb-24' },
                 e('header', { className: 'mb-8 mt-4 text-center' },
                     e('h1', { className: 'text-3xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400' }, 'PHASE 15'),
-                    e('div', { className: 'flex justify-center gap-4 mt-2' },
-                        e('span', { className: 'text-[9px] font-bold text-slate-500 uppercase tracking-tighter' }, 'Race: March 7'),
-                        e('span', { className: 'text-[9px] font-bold text-slate-500 uppercase tracking-tighter' }, 'Goal: 15% BF')
-                    )
+                    e('p', { className: 'text-[9px] font-bold text-slate-500 uppercase tracking-widest' }, 'March 7th Race Prep')
                 ),
 
-                // SUMMARY DASHBOARD
-                e('div', { className: 'grid grid-cols-2 gap-3 mb-8' },
-                    [{l:'Workouts', v:stats.total, i:'fa-dumbbell', c:'text-blue-400'},
-                     {l:'Weight Loss', v:stats.loss + ' lbs', i:'fa-arrow-trend-down', c:'text-emerald-400'},
-                     {l:'Current', v:stats.curr || '--', i:'fa-weight-scale', c:'text-purple-400'},
-                     {l:'Streak', v:stats.streak + ' Days', i:'fa-fire', c:'text-orange-400'}].map(s => 
+                // SUMMARY
+                e('div', { className: 'grid grid-cols-2 gap-3 mb-6' },
+                    [{l:'Weight Loss', v:stats.loss + ' lbs', i:'fa-arrow-trend-down', c:'text-emerald-400'},
+                     {l:'Current', v:stats.curr || '--', i:'fa-weight-scale', c:'text-purple-400'}].map(s => 
                         e('div', { key: s.l, className: 'glass-card p-4 rounded-2xl border border-slate-800' },
-                            e('i', { className: `fas ${s.i} ${s.c} mb-2 text-xs` }),
-                            e('p', { className: 'text-[10px] uppercase font-black text-slate-500 mb-1' }, s.l),
+                            e('i', { className: `fas ${s.i} ${s.c} mb-1 text-xs` }),
+                            e('p', { className: 'text-[10px] uppercase font-black text-slate-500' }, s.l),
                             e('p', { className: 'text-xl font-black' }, s.v)
                         )
                     )
                 ),
 
-                // NAVIGATION
+                // NAV
                 e('div', { className: 'flex gap-2 mb-8 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 sticky top-4 z-50' },
                     ['history', 'workout', 'fuel', 'metrics'].map(tab => 
-                        e('button', {
-                            key: tab, onClick: () => setActiveTab(tab),
-                            className: `flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === tab ? 'tab-active' : 'text-slate-500'}`
-                        }, tab)
+                        e('button', { key: tab, onClick: () => setActiveTab(tab), className: `flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${activeTab === tab ? 'tab-active' : 'text-slate-500'}` }, tab)
                     )
                 ),
 
-                // 1. HISTORY TAB
+                // HISTORY
                 activeTab === 'history' && e('div', { className: 'space-y-4' },
-                    workouts.length === 0 ? e('p', { className: 'text-center text-slate-600 py-10 text-sm italic' }, "Archive empty. Start training.") :
                     workouts.map((w, i) => e('div', { key: i, className: 'glass-card p-5 rounded-2xl border-l-4 border-blue-500' },
-                        e('div', { className: 'flex justify-between items-start mb-3' },
-                            e('div', null,
-                                e('h3', { className: 'text-sm font-black uppercase text-blue-400' }, w.type),
-                                e('p', { className: 'text-[10px] font-bold text-slate-500' }, w.date)
-                            ),
-                            e('i', { className: 'fas fa-check-circle text-emerald-500 text-xs' })
+                        e('div', { className: 'flex justify-between mb-3' },
+                            e('h3', { className: 'text-sm font-black uppercase text-blue-400' }, w.type),
+                            e('span', { className: 'text-[10px] font-bold text-slate-500' }, w.date)
                         ),
-                        e('p', { className: 'text-xs text-slate-300 leading-relaxed font-medium' }, w.content)
+                        e('pre', { className: 'text-[11px] text-slate-300 leading-tight font-medium' }, w.content)
                     ))
                 ),
 
-                // 2. WORKOUT TAB
-                activeTab === 'workout' && e('div', { className: 'space-y-3' },
-                    ['Upper Push', 'Upper Pull', 'Lower Quad', 'Lower Ham', 'Zone 2 Run'].map(t => e('button', { 
-                        onClick: () => {
-                            const n = { type: t, date: new Date().toLocaleDateString(), content: "Split Completed." };
-                            setWorkouts([n, ...workouts]);
-                            logAction({dataType:'lift', ...n});
-                        },
-                        className: 'w-full glass-card p-6 rounded-2xl text-left flex justify-between items-center group active:scale-[0.98] transition'
-                    }, 
-                        e('div', null, e('h3', { className: 'font-black uppercase text-sm' }, t), e('p', { className: 'text-[10px] text-slate-500' }, '5-Day Strength Split')),
-                        e('i', { className: 'fas fa-plus text-blue-500 group-hover:rotate-90 transition' })
-                    ))
-                ),
-
-                // 3. FUEL TAB
-                activeTab === 'fuel' && e('div', { className: 'glass-card p-6 rounded-3xl space-y-6' },
-                    [{l:'Protein', k:'p', c:'bg-emerald-500', t:targets.p}, {l:'Carbs', k:'c', c:'bg-blue-500', t:targets.c}, {l:'Fats', k:'f', c:'bg-amber-500', t:targets.f}].map(m => e('div', { key: m.k },
-                        e('div', { className: 'flex justify-between text-[10px] font-black uppercase mb-2' }, e('span', null, m.l), e('span', {className:'text-slate-500'}, `${macros[m.k]}g / ${m.t}g`)),
-                        e('div', { className: 'bg-slate-800 h-2.5 rounded-full mb-3' }, e('div', { className: `progress-fill ${m.c}`, style: { width: `${Math.min((macros[m.k]/m.t)*100, 100)}%` } })),
-                        e('input', { type: 'number', className: 'input-dark text-sm', placeholder: `Add ${m.l}`, onChange: (v) => setMacros({...macros, [m.k]: v.target.value}) })
-                    )),
-                    e('button', { className: 'w-full bg-emerald-600 py-4 rounded-2xl font-black uppercase shadow-lg shadow-emerald-900/20', onClick: () => logAction({dataType:'food', ...macros}) }, 'Sync Fuel Status')
-                ),
-
-                // 4. METRICS TAB
-                activeTab === 'metrics' && e('div', { className: 'glass-card p-8 rounded-3xl space-y-6' },
-                    e('div', null,
-                        e('p', { className: 'text-[10px] font-black text-slate-500 uppercase mb-3 text-center' }, 'Current Weight (LBS)'),
-                        e('input', { id: 'w-in', type: 'number', className: 'input-dark text-2xl font-black', placeholder: '0.0' })
-                    ),
-                    e('button', { 
-                        className: 'w-full bg-blue-600 py-4 rounded-2xl font-black uppercase',
-                        onClick: () => {
-                            const val = document.getElementById('w-in').value;
-                            if(val) {
-                                const newM = [{type:'weight', value: parseFloat(val), date: new Date().toLocaleDateString()}, ...(metrics || [])];
-                                setMetrics(newM);
-                                logAction({dataType:'metrics', weight: val});
-                                document.getElementById('w-in').value = '';
-                                setActiveTab('history');
-                            }
-                        }
-                    }, 'Update Vitals')
-                ),
-
-                status && e('div', { className: 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 px-6 py-2 rounded-full text-[10px] font-black shadow-2xl animate-bounce' }, status)
-            );
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('app'));
-        root.render(e(App));
-    </script>
-</body>
-</html>
+                // WORKOUT
+                activeTab === 'workout' && (!currentWorkout ? (
+                    e('div', { className: 'space-y-3' },
+                        Object.keys(templates).map(t => e('button', { onClick: () => startWorkout(t), className: 'w-full glass-card p-5 rounded-2xl text-left font-black uppercase text-sm border border-slate-800 hover:border-blue-500 transition' }, t))
+                    )
+                ) : (
+                    e('div', { className: 'space-y-4' },
+                        e('h2', { className: 'text-xl font-black text-blue-400 mb-4' }, currentWorkout),
+                        activeExercises.map((ex, exIdx) => e('div', { key: exIdx, className: 'glass-card p-4 rounded-2xl border border-slate-800' },
+                            e('p', { className: 'text-xs font-black uppercase text-emerald-400 mb-3' }, ex.name),
+                            ex.sets.map((s, si) => e('div', { key: si, className: 'flex gap-2 mb-2' },
+                                e('input', { type: 'number', placeholder: 'LBS', className: 'input-dark text-xs flex-1', value: s.w, onChange: (v) => updateSet(exIdx, si, 'w', v.target.value) }),
+                                e('input', { type: 'number', placeholder: 'REPS', className: 'input-dark
