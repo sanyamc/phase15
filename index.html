@@ -17,8 +17,7 @@
         .accent-text { background: linear-gradient(to right, #60a5fa, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .streak-fire { animation: pulse 1.5s infinite; text-shadow: 0 0 15px rgba(249, 115, 22, 0.6); }
         @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } }
-        .milestone-overlay { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.9); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .vitals-row { border-bottom: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -36,10 +35,10 @@
             const [showMilestone, setShowMilestone] = useState(null);
 
             const milestones = {
-                7: { title: "Foundation Set", msg: "Neuro-muscular adaptation has begun. Your brain is learning to recruit muscle fibers more efficiently.", icon: "fa-seedling" },
-                21: { title: "Habit Locked", msg: "The 'Basal Ganglia' in your brain has now automated this behavior. You are no longer trying; you are becoming.", icon: "fa-anchor" },
-                50: { title: "Metabolic Shift", msg: "Mitochondrial density has significantly increased. Your body is now a more efficient fat-burning machine.", icon: "fa-fire-alt" },
-                100: { title: "Elite Recomp", msg: "Systemic transformation complete. You have achieved a level of consistency only 5% of the population ever reaches.", icon: "fa-crown" }
+                7: { title: "Foundation Set", msg: "Neuro-muscular adaptation has begun. Your brain is learning to recruit muscle fibers.", icon: "fa-seedling" },
+                21: { title: "Habit Locked", msg: "Automation complete. You are no longer trying; you are becoming.", icon: "fa-anchor" },
+                50: { title: "Metabolic Shift", msg: "Mitochondrial density increased. Your body is a fat-burning machine.", icon: "fa-fire-alt" },
+                100: { title: "Elite Recomp", msg: "Transformation complete. You've reached the top 5% of consistency.", icon: "fa-crown" }
             };
 
             const templates = {
@@ -51,69 +50,56 @@
             };
 
             useEffect(() => {
-                const w = JSON.parse(localStorage.getItem('p15_w_v6') || '[]');
-                const m = JSON.parse(localStorage.getItem('p15_m_v6') || '[]');
+                const w = JSON.parse(localStorage.getItem('p15_w_v7') || '[]');
+                const m = JSON.parse(localStorage.getItem('p15_m_v7') || '[]');
                 setWorkouts(w);
                 setMetrics(m);
             }, []);
 
-            const save = () => {
+            const saveWkt = () => {
                 const text = exData.map(e => `${e.name}\n${e.sets.map((s,i) => `S${i+1}: ${s.w}lb x ${s.r}`).join(' | ')}`).join('\n\n');
                 const log = { type: activeWkt, date: new Date().toLocaleDateString(), content: text };
-                const updatedWorkouts = [log, ...workouts];
-                
-                // Check Milestone
-                const streak = [...new Set(updatedWorkouts.map(w => w.date))].length;
+                const updated = [log, ...workouts];
+                const streak = [...new Set(updated.map(w => w.date))].length;
                 if (milestones[streak]) setShowMilestone(streak);
+                setWorkouts(updated);
+                localStorage.setItem('p15_w_v7', JSON.stringify(updated));
+                setActiveWkt(null); setTab('history');
+            };
 
-                setWorkouts(updatedWorkouts);
-                localStorage.setItem('p15_w_v6', JSON.stringify(updatedWorkouts));
-                setActiveWkt(null);
-                setTab('history');
-                if(SCRIPT_URL.includes('http')) fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'lift', ...log}) });
+            const saveMetric = () => {
+                const w = document.getElementById('w-val').value, bf = document.getElementById('bf-val').value;
+                if(!w && !bf) return;
+                const newM = [{w: parseFloat(w)||0, bf: parseFloat(bf)||0, date:new Date().toLocaleDateString()}, ...metrics];
+                setMetrics(newM);
+                localStorage.setItem('p15_m_v7', JSON.stringify(newM));
+                document.getElementById('w-val').value = ''; document.getElementById('bf-val').value = '';
             };
 
             const stats = (() => {
-                const latest = metrics.length > 0 ? metrics[0] : {w:0, bf:0};
-                const initial = metrics.length > 0 ? metrics[metrics.length - 1] : {w:0, bf:0};
-                const uniqueDays = [...new Set(workouts.map(w => w.date))];
-                return { 
-                    w: latest.w || '--', bf: latest.bf || '--',
-                    wDrop: (initial.w - latest.w).toFixed(1),
-                    bfDrop: (initial.bf - latest.bf).toFixed(1),
-                    streak: uniqueDays.length
-                };
+                const latest = metrics[0] || {w:0, bf:0};
+                const initial = metrics[metrics.length - 1] || {w:0, bf:0};
+                return { w: latest.w, bf: latest.bf, wD: (initial.w - latest.w).toFixed(1), bfD: (initial.bf - latest.bf).toFixed(1), s: [...new Set(workouts.map(w => w.date))].length };
             })();
 
             return h('div', { className: 'max-w-md mx-auto p-4' },
-                // Milestone Popup
-                showMilestone && h('div', { className: 'milestone-overlay', onClick: () => setShowMilestone(null) },
-                    h('div', { className: 'glass p-8 rounded-3xl border-2 border-blue-500 max-w-xs' },
+                showMilestone && h('div', { className: 'fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-6 text-center', onClick: () => setShowMilestone(null) },
+                    h('div', { className: 'glass p-8 rounded-3xl border-2 border-blue-500' },
                         h('i', { className: `fas ${milestones[showMilestone].icon} text-6xl text-blue-500 mb-4 streak-fire` }),
                         h('h2', { className: 'text-2xl font-black mb-2' }, milestones[showMilestone].title),
                         h('p', { className: 'text-4xl font-black text-blue-400 mb-4' }, showMilestone, " DAYS"),
-                        h('p', { className: 'text-sm text-slate-300 leading-relaxed italic' }, milestones[showMilestone].msg),
-                        h('button', { className: 'mt-6 bg-blue-600 px-8 py-3 rounded-full font-black text-xs' }, "CONTINUE PHASE 15")
+                        h('p', { className: 'text-sm text-slate-300 italic' }, milestones[showMilestone].msg)
                     )
                 ),
 
                 h('div', { className: 'text-center py-6' },
                     h('h1', { className: 'text-4xl font-black italic accent-text' }, 'PHASE 15'),
-                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]' }, 'Protocol: 31% → 15%')
+                    h('p', { className: 'text-[10px] text-slate-500 font-bold uppercase tracking-widest' }, 'Target: 15% Body Fat')
                 ),
 
                 tab === 'history' && h('div', { className: 'grid grid-cols-3 gap-2 mb-6' },
-                    [{l:'Streak', v:stats.streak, i:'fa-fire', c:'text-orange-500 streak-fire'},
-                     {l:'Weight', v:stats.w, i:'fa-weight-scale', c:'text-blue-500'},
-                     {l:'Body Fat', v:stats.bf + '%', i:'fa-percent', c:'text-emerald-500'},
-                     {l:'W-Drop', v:stats.wDrop, i:'fa-arrow-down', c:'text-blue-400'},
-                     {l:'BF-Drop', v:stats.bfDrop + '%', i:'fa-droplet-slash', c:'text-emerald-400'},
-                     {l:'Logs', v:workouts.length, i:'fa-clipboard-check', c:'text-slate-400'}].map(s => 
-                        h('div', { key: s.l, className: 'glass p-3 rounded-xl text-center' }, 
-                            h('i', { className: `fas ${s.i} ${s.c} text-[10px] mb-1` }), 
-                            h('p', { className: 'text-[8px] uppercase font-bold text-slate-500' }, s.l), 
-                            h('p', { className: 'text-sm font-black' }, s.v)
-                        )
+                    [{l:'Streak', v:stats.s, i:'fa-fire', c:'text-orange-500 streak-fire'}, {l:'Weight', v:stats.w, i:'fa-weight-scale', c:'text-blue-500'}, {l:'Body Fat', v:stats.bf+'%', i:'fa-percent', c:'text-emerald-500'}, {l:'W-Drop', v:stats.wD, i:'fa-arrow-down', c:'text-blue-400'}, {l:'BF-Drop', v:stats.bfD+'%', i:'fa-droplet-slash', c:'text-emerald-400'}, {l:'Logs', v:workouts.length, i:'fa-clipboard-check', c:'text-slate-400'}].map(s => 
+                        h('div', { key: s.l, className: 'glass p-3 rounded-xl text-center' }, h('i', { className: `fas ${s.i} ${s.c} text-[10px] mb-1` }), h('p', { className: 'text-[8px] uppercase font-bold text-slate-500' }, s.l), h('p', { className: 'text-sm font-black' }, s.v))
                     )
                 ),
 
@@ -126,7 +112,7 @@
                         const dayPlan = { Monday:'Upper Push (Hypertrophy)', Tuesday:'Half-Marathon Prep', Wednesday:'Lower Quad (Endurance)', Thursday:'Upper Pull (Strength)', Friday:'Lower Ham (Power)', Saturday:'Half-Marathon Prep', Sunday:'Rest & Recovery' };
                         return h('div', { key: d, className: 'glass p-4 rounded-2xl flex justify-between items-center' },
                             h('div', null, h('p', { className: 'text-[10px] font-bold text-slate-500 uppercase' }, d), h('p', { className: 'text-sm font-black' }, dayPlan[d])),
-                            dayPlan[d].includes('Rest') ? null : h('button', { onClick: () => { setActiveWkt(dayPlan[d]); setExData(templates[dayPlan[d]].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({w:'', r:''}) }))); setTab('workout'); }, className: 'text-[10px] bg-blue-600 px-3 py-1.5 rounded-lg font-black' }, 'GO')
+                            dayPlan[d].includes('Rest') ? null : h('button', { onClick: () => { setActiveWkt(dayPlan[d]); setExData(templates[dayPlan[d]].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({w:'', r:''}) }))); setTab('workout'); }, className: 'bg-blue-600 px-4 py-2 rounded-lg font-black text-[10px]' }, 'START')
                         );
                     })
                 ),
@@ -134,14 +120,14 @@
                 tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-10' },
                     h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
                     exData.map((ex, i) => h('div', { key: i, className: 'glass p-4 rounded-2xl' },
-                        h('div', { className: 'flex justify-between mb-3' }, h('p', { className: 'text-xs font-black uppercase text-slate-300' }, ex.name), h('span', { className: 'text-[10px] text-blue-500 font-bold' }, 'Target: ', ex.target)),
+                        h('div', { className: 'flex justify-between mb-3 font-black uppercase text-[10px]' }, h('p', {className:'text-slate-300'}, ex.name), h('span', {className:'text-blue-500'}, 'Aim: '+ex.target)),
                         ex.sets.map((set, si) => h('div', { key: si, className: 'flex gap-2 mb-2' },
                             h('input', { placeholder: 'LBS', type: 'number', className: 'input-box flex-1', onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], w: e.target.value}; setExData(n); }}),
                             h('input', { placeholder: 'REPS', type: 'number', className: 'input-box flex-1', onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; setExData(n); }})
                         ))
                     )),
-                    h('button', { onClick: save, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase' }, 'Save Session')
-                ) : h('p', { className: 'text-center py-20 text-slate-500 italic' }, "Select a workout from Plan.")),
+                    h('button', { onClick: saveWkt, className: 'w-full bg-blue-600 p-4 rounded-2xl font-black uppercase' }, 'Complete Session')
+                ) : h('p', { className: 'text-center py-20 text-slate-500 italic' }, "Start from PLAN tab.")),
 
                 tab === 'history' && h('div', { className: 'space-y-4' },
                     workouts.map((w, i) => h('div', { key: i, className: 'glass p-5 rounded-2xl border-l-4 border-blue-600' },
@@ -150,16 +136,25 @@
                     ))
                 ),
 
-                tab === 'metrics' && h('div', { className: 'glass p-8 rounded-3xl space-y-4' },
-                    h('input', { id: 'w-val', type: 'number', placeholder: 'Weight (lbs)', className: 'input-box text-xl h-14' }),
-                    h('input', { id: 'bf-val', type: 'number', placeholder: 'Body Fat %', className: 'input-box text-xl h-14' }),
-                    h('button', { onClick: () => { 
-                        const w = document.getElementById('w-val').value, bf = document.getElementById('bf-val').value;
-                        if(w||bf) {
-                            const newM = [{w: parseFloat(w)||0, bf: parseFloat(bf)||0, date:new Date().toLocaleDateString()}, ...metrics];
-                            setMetrics(newM); localStorage.setItem('p15_m_v6', JSON.stringify(newM)); setTab('history');
-                        }
-                    }, className: 'w-full bg-emerald-600 p-4 rounded-2xl font-black uppercase' }, 'Update Vitals')
+                tab === 'metrics' && h('div', { className: 'space-y-6 pb-20' },
+                    h('div', { className: 'glass p-6 rounded-3xl space-y-4' },
+                        h('p', { className: 'text-xs font-black text-slate-500 uppercase text-center' }, 'Log New Vitals'),
+                        h('div', { className: 'flex gap-2' },
+                            h('input', { id: 'w-val', type: 'number', placeholder: 'Weight', className: 'input-box flex-1' }),
+                            h('input', { id: 'bf-val', type: 'number', placeholder: 'BF %', className: 'input-box flex-1' })
+                        ),
+                        h('button', { onClick: saveMetric, className: 'w-full bg-emerald-600 p-4 rounded-2xl font-black uppercase' }, 'Save Entry')
+                    ),
+                    h('div', { className: 'glass rounded-3xl overflow-hidden' },
+                        h('div', { className: 'bg-slate-800/50 p-4' }, h('p', { className: 'text-[10px] font-black uppercase tracking-widest text-slate-400' }, 'Recent Measurements')),
+                        metrics.map((m, i) => h('div', { key: i, className: 'vitals-row p-4 flex justify-between items-center' },
+                            h('div', null, h('p', { className: 'text-xs font-black' }, m.date)),
+                            h('div', { className: 'flex gap-4' },
+                                h('div', {className:'text-center'}, h('p', {className:'text-[8px] text-slate-500 uppercase font-bold'}, 'Weight'), h('p', {className:'text-sm font-black text-blue-400'}, m.w)),
+                                h('div', {className:'text-center'}, h('p', {className:'text-[8px] text-slate-500 uppercase font-bold'}, 'BF %'), h('p', {className:'text-sm font-black text-emerald-400'}, m.bf+'%'))
+                            )
+                        ))
+                    )
                 )
             );
         }
