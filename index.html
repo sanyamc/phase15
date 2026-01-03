@@ -20,15 +20,31 @@
             background: radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
                         radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
             pointer-events: none; z-index: 0;
+            animation: bgPulse 8s ease-in-out infinite;
+        }
+        @keyframes bgPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         .app-container { position: relative; z-index: 1; }
         .glass-strong {
             background: rgba(20, 30, 50, 0.9); backdrop-filter: blur(24px);
             border: 1px solid rgba(59, 130, 246, 0.2); box-shadow: 0 20px 60px rgba(59, 130, 246, 0.1);
+            transition: all 0.3s ease;
+        }
+        .glass-strong:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 70px rgba(59, 130, 246, 0.15);
         }
         .input-box { 
             background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(59, 130, 246, 0.3);
             color: white; border-radius: 12px; padding: 14px; width: 100%; text-align: center; font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        .input-box:focus {
+            outline: none;
+            border-color: rgba(59, 130, 246, 0.6);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         .tab-btn { 
             flex: 1; padding: 16px; font-size: 10px; font-weight: 800; text-transform: uppercase;
@@ -38,10 +54,63 @@
         .accent-text { 
             background: linear-gradient(135deg, #60a5fa 0%, #34d399 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shimmer 3s ease-in-out infinite;
         }
-        .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-        .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-        .history-card { border-left: 3px solid #3b82f6; padding-left: 12px; margin-bottom: 12px; }
+        @keyframes shimmer {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-success { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-success:active { transform: scale(0.98); }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #3b82f6;
+            position: fixed;
+            animation: confetti-fall 3s ease-out forwards;
+            z-index: 9999;
+        }
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .stat-card {
+            animation: scaleIn 0.5s ease-out;
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -50,7 +119,131 @@
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwA2DHXoElBhy242D5238NMfjS1c49bG2q5bRDjxbmswP1U9grG8PTipS_s6p-LpI7e/exec';
         
         window.addEventListener('load', function() {
-            const { createElement: h, useState, useEffect } = React;
+            const { createElement: h, useState, useEffect, useRef } = React;
+
+            function ProgressRing({ progress, size = 60 }) {
+                const radius = (size - 8) / 2;
+                const circumference = radius * 2 * Math.PI;
+                const offset = circumference - (progress / 100) * circumference;
+                
+                return h('svg', { width: size, height: size, className: 'progress-ring' },
+                    h('circle', {
+                        className: 'progress-ring-circle',
+                        stroke: 'rgba(59, 130, 246, 0.2)',
+                        strokeWidth: 4,
+                        fill: 'transparent',
+                        r: radius,
+                        cx: size / 2,
+                        cy: size / 2
+                    }),
+                    h('circle', {
+                        className: 'progress-ring-circle',
+                        stroke: '#3b82f6',
+                        strokeWidth: 4,
+                        fill: 'transparent',
+                        r: radius,
+                        cx: size / 2,
+                        cy: size / 2,
+                        strokeDasharray: circumference,
+                        strokeDashoffset: offset,
+                        strokeLinecap: 'round'
+                    })
+                );
+            }
+
+            function createConfetti() {
+                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+                for (let i = 0; i < 50; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 3500);
+                }
+            }
+
+            function RestTimer({ onComplete }) {
+                const [seconds, setSeconds] = useState(90);
+                const [isActive, setIsActive] = useState(true);
+
+                useEffect(() => {
+                    let interval;
+                    if (isActive && seconds > 0) {
+                        interval = setInterval(() => {
+                            setSeconds(s => s - 1);
+                        }, 1000);
+                    } else if (seconds === 0) {
+                        onComplete();
+                    }
+                    return () => clearInterval(interval);
+                }, [isActive, seconds]);
+
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+
+                return h('div', { className: 'fixed top-20 right-5 glass-strong p-4 rounded-2xl z-50 fade-in' },
+                    h('div', { className: 'text-center' },
+                        h('p', { className: 'text-[9px] text-blue-400 font-bold uppercase mb-2' }, 'Rest Timer'),
+                        h('p', { className: 'text-2xl font-black text-white' }, `${minutes}:${secs.toString().padStart(2, '0')}`),
+                        h('button', { 
+                            onClick: () => setIsActive(!isActive),
+                            className: 'mt-2 text-[9px] text-slate-400 hover:text-white'
+                        }, isActive ? 'Pause' : 'Resume')
+                    )
+                );
+            }
+
+            function WeightChart({ metrics }) {
+                if (!metrics || metrics.length === 0) return null;
+                
+                const data = [...metrics].reverse().slice(-10);
+                const maxW = Math.max(...data.map(m => parseFloat(m.w) || 0));
+                const minW = Math.min(...data.map(m => parseFloat(m.w) || 0));
+                const range = maxW - minW || 1;
+
+                return h('div', { className: 'glass-strong p-5 rounded-2xl mb-6 fade-in' },
+                    h('h3', { className: 'text-xs font-black uppercase tracking-wider text-slate-400 mb-4' }, 'Weight Progression'),
+                    h('div', { className: 'relative h-32' },
+                        h('svg', { width: '100%', height: '100%', className: 'overflow-visible' },
+                            h('polyline', {
+                                fill: 'none',
+                                stroke: 'url(#gradient)',
+                                strokeWidth: 3,
+                                points: data.map((m, i) => {
+                                    const x = (i / (data.length - 1)) * 100;
+                                    const y = 100 - (((parseFloat(m.w) - minW) / range) * 80 + 10);
+                                    return `${x}%,${y}%`;
+                                }).join(' ')
+                            }),
+                            h('defs', null,
+                                h('linearGradient', { id: 'gradient', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
+                                    h('stop', { offset: '0%', style: { stopColor: '#3b82f6', stopOpacity: 1 }}),
+                                    h('stop', { offset: '100%', style: { stopColor: '#10b981', stopOpacity: 1 }})
+                                )
+                            ),
+                            data.map((m, i) => {
+                                const x = (i / (data.length - 1)) * 100;
+                                const y = 100 - (((parseFloat(m.w) - minW) / range) * 80 + 10);
+                                return h('circle', {
+                                    key: i,
+                                    cx: `${x}%`,
+                                    cy: `${y}%`,
+                                    r: 4,
+                                    fill: '#3b82f6',
+                                    className: 'cursor-pointer'
+                                });
+                            })
+                        )
+                    ),
+                    h('div', { className: 'flex justify-between text-[9px] text-slate-500 mt-2' },
+                        h('span', null, data[0]?.date),
+                        h('span', null, data[data.length - 1]?.date)
+                    )
+                );
+            }
 
             function App() {
                 const [tab, setTab] = useState('dashboard');
@@ -59,6 +252,8 @@
                 const [loading, setLoading] = useState(true);
                 const [activeWkt, setActiveWkt] = useState(null);
                 const [exData, setExData] = useState([]);
+                const [showTimer, setShowTimer] = useState(false);
+                const [completedSets, setCompletedSets] = useState({});
 
                 const templates = {
                     'Upper Push (Hypertrophy)': [{n: 'Incline DB Press', s: 3, r: '8-10'}, {n: 'Dips (Chest Focused)', s: 3, r: '10-12'}, {n: 'Overhead Press', s: 3, r: '8-10'}, {n: 'Lateral Raises', s: 3, r: '12-15'}],
@@ -73,9 +268,7 @@
                         try {
                             const response = await fetch(SCRIPT_URL);
                             const data = await response.json();
-                            // Sort by date descending (assuming date format is localizable)
-                            const sortedWkts = (data.workouts || []).sort((a,b) => new Date(b.date) - new Date(a.date));
-                            setWorkouts(sortedWkts);
+                            setWorkouts(data.workouts || []);
                             setMetrics(data.metrics || []);
                         } catch (e) { console.error(e); }
                         setLoading(false);
@@ -88,7 +281,17 @@
                     const log = { type: activeWkt, date: new Date().toLocaleDateString(), content: text };
                     setWorkouts([log, ...workouts]);
                     fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({dataType:'lift', ...log}) });
-                    setActiveWkt(null); setTab('dashboard');
+                    createConfetti();
+                    setActiveWkt(null); 
+                    setCompletedSets({});
+                    setTab('dashboard');
+                };
+
+                const markSetComplete = (exIdx, setIdx) => {
+                    const key = `${exIdx}-${setIdx}`;
+                    setCompletedSets(prev => ({ ...prev, [key]: true }));
+                    setShowTimer(true);
+                    setTimeout(() => setShowTimer(false), 90000);
                 };
 
                 const stats = (() => {
@@ -96,12 +299,21 @@
                     return { w: latest.w, bf: latest.bf, s: [...new Set(workouts.map(w => w.date))].length };
                 })();
 
-                // Logic to get history for the current active workout
-                const activeHistory = workouts.filter(w => w.type === activeWkt).slice(0, 2);
+                const getWorkoutProgress = () => {
+                    if (!exData.length) return 0;
+                    const totalSets = exData.reduce((acc, ex) => acc + ex.sets.length, 0);
+                    const completed = Object.keys(completedSets).length;
+                    return (completed / totalSets) * 100;
+                };
 
-                if (loading) return h('div', {className: 'h-screen flex flex-col items-center justify-center'}, h('i', {className: 'fas fa-dna text-5xl text-blue-500 animate-pulse'}));
+                if (loading) return h('div', {className: 'h-screen flex flex-col items-center justify-center'}, 
+                    h('i', {className: 'fas fa-dna text-5xl text-blue-500 animate-pulse'}),
+                    h('p', {className: 'mt-4 text-sm text-slate-400 animate-pulse'}, 'Loading your data...')
+                );
 
                 return h('div', { className: 'app-container max-w-md mx-auto p-5' },
+                    showTimer && h(RestTimer, { onComplete: () => setShowTimer(false) }),
+                    
                     h('div', { className: 'text-center py-6 mb-4' },
                         h('h1', { className: 'text-5xl font-black italic accent-text mb-1' }, 'PHASE 15'),
                         h('p', { className: 'text-[9px] text-slate-500 font-bold uppercase tracking-[3px]' }, 'Elite Performance Tracker')
@@ -111,61 +323,123 @@
                         ['dashboard', 'plan', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
                     ),
 
-                    tab === 'dashboard' && h('div', { className: 'space-y-6' },
+                    tab === 'dashboard' && h('div', { className: 'space-y-6 fade-in' },
                         h('div', { className: 'grid grid-cols-3 gap-3' },
-                            [{l:'Streak', v:stats.s, i:'fa-fire', c:'text-orange-500'}, {l:'Weight', v:stats.w, i:'fa-weight-scale', c:'text-blue-500'}, {l:'Body Fat', v:stats.bf+'%', i:'fa-bolt', c:'text-emerald-500'}].map(s => 
-                                h('div', { key: s.l, className: 'glass-strong p-4 rounded-2xl text-center' }, h('i', { className: `fas ${s.i} ${s.c} mb-2` }), h('p', { className: 'text-xl font-black' }, s.v), h('p', { className: 'text-[8px] uppercase font-bold text-slate-400' }, s.l))
+                            [{l:'Streak', v:stats.s, i:'fa-fire', c:'text-orange-500'}, {l:'Weight', v:stats.w, i:'fa-weight-scale', c:'text-blue-500'}, {l:'Body Fat', v:stats.bf+'%', i:'fa-bolt', c:'text-emerald-500'}].map((s, idx) => 
+                                h('div', { key: s.l, className: 'glass-strong p-4 rounded-2xl text-center stat-card', style: { animationDelay: `${idx * 0.1}s` }}, 
+                                    h('i', { className: `fas ${s.i} ${s.c} mb-2 text-xl` }), 
+                                    h('p', { className: 'text-xl font-black' }, s.v), 
+                                    h('p', { className: 'text-[8px] uppercase font-bold text-slate-400' }, s.l)
+                                )
                             )
                         ),
                         h('div', { className: 'glass-strong p-5 rounded-2xl' },
-                            h('h3', { className: 'text-xs font-black uppercase tracking-wider text-slate-400 mb-4' }, 'Last Activity'),
-                            workouts.length > 0 ? h('div', { className: 'border-l-2 border-emerald-500/30 pl-4 py-1' },
+                            h('h3', { className: 'text-xs font-black uppercase tracking-wider text-slate-400 mb-4' }, 'Recent Training History'),
+                            workouts.length > 0 ? workouts.slice(0, 3).map((w, i) => h('div', { key: i, className: 'mb-4 last:mb-0 border-l-2 border-blue-500/30 pl-4 py-1' },
                                 h('div', { className: 'flex justify-between text-[11px] mb-1' },
-                                    h('span', { className: 'font-black text-emerald-400 uppercase' }, workouts[0].type),
-                                    h('span', { className: 'text-slate-500 font-bold' }, workouts[0].date)
+                                    h('span', { className: 'font-black text-blue-400 uppercase' }, w.type),
+                                    h('span', { className: 'text-slate-500 font-bold' }, w.date)
                                 ),
-                                h('pre', { className: 'text-[10px] text-slate-300 font-medium leading-relaxed whitespace-pre-wrap' }, workouts[0].content)
-                            ) : h('p', {className: 'text-xs text-slate-500 text-center py-4 italic'}, 'No sessions logged.')
+                                h('pre', { className: 'text-[10px] text-slate-300 font-medium leading-relaxed whitespace-pre-wrap' }, w.content)
+                            )) : h('p', {className: 'text-xs text-slate-500 text-center py-4 italic'}, 'No workouts logged yet.')
                         ),
-                        h('button', { onClick: () => setTab('plan'), className: 'w-full btn-primary p-5 rounded-2xl font-black uppercase text-xs tracking-widest' }, 'Begin Daily Session')
+                        h('button', { onClick: () => setTab('plan'), className: 'w-full btn-primary p-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:shadow-xl' }, 
+                            h('i', {className: 'fas fa-dumbbell mr-2'}),
+                            'Begin Daily Session'
+                        )
                     ),
 
-                    tab === 'plan' && h('div', { className: 'space-y-3' },
-                        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => {
+                    tab === 'plan' && h('div', { className: 'space-y-3 fade-in' },
+                        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((d, idx) => {
                             const dayPlan = { Monday:'Upper Push (Hypertrophy)', Tuesday:'Half-Marathon Prep', Wednesday:'Lower Quad (Endurance)', Thursday:'Upper Pull (Strength)', Friday:'Lower Ham (Power)', Saturday:'Half-Marathon Prep', Sunday:'Rest & Recovery' };
-                            return h('div', { key: d, className: 'glass-strong p-5 rounded-2xl flex justify-between items-center' },
-                                h('div', null, h('p', { className: 'text-[10px] font-bold text-blue-400 uppercase mb-1' }, d), h('p', { className: 'text-sm font-black' }, dayPlan[d])),
-                                !dayPlan[d].includes('Rest') && h('button', { onClick: () => { setActiveWkt(dayPlan[d]); setExData(templates[dayPlan[d]].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({w:'', r:''}) }))); setTab('workout'); }, className: 'btn-primary px-4 py-2 rounded-xl font-black text-[10px]' }, 'START')
+                            return h('div', { key: d, className: 'glass-strong p-5 rounded-2xl flex justify-between items-center', style: { animationDelay: `${idx * 0.05}s` }},
+                                h('div', null, 
+                                    h('p', { className: 'text-[10px] font-bold text-blue-400 uppercase mb-1' }, d), 
+                                    h('p', { className: 'text-sm font-black' }, dayPlan[d])
+                                ),
+                                !dayPlan[d].includes('Rest') && h('button', { 
+                                    onClick: () => { 
+                                        setActiveWkt(dayPlan[d]); 
+                                        setExData(templates[dayPlan[d]].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({w:'', r:''}) }))); 
+                                        setCompletedSets({});
+                                        setTab('workout'); 
+                                    }, 
+                                    className: 'btn-primary px-4 py-2 rounded-xl font-black text-[10px] shadow-md hover:shadow-lg' 
+                                }, 'START')
                             );
                         })
                     ),
 
-                    tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-24' },
-                        h('div', { className: 'flex justify-between items-end' },
-                            h('h2', { className: 'text-xl font-black text-blue-400 italic' }, activeWkt),
-                            h('button', { onClick: () => setTab('plan'), className: 'text-[10px] text-slate-500 font-bold' }, 'CANCEL')
+                    tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-24 fade-in' },
+                        h('div', { className: 'flex justify-between items-center mb-4' },
+                            h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
+                            h('div', { className: 'flex items-center gap-2' },
+                                h(ProgressRing, { progress: getWorkoutProgress(), size: 50 }),
+                                h('span', { className: 'text-xs font-bold text-slate-400' }, `${Math.round(getWorkoutProgress())}%`)
+                            )
                         ),
-
-                        // Contextual History for this specific workout
-                        activeHistory.length > 0 && h('div', { className: 'glass-strong p-4 rounded-2xl border-dashed border-slate-700' },
-                            h('h3', { className: 'text-[9px] font-black uppercase text-slate-500 mb-3 tracking-widest' }, 'Previous Performance'),
-                            activeHistory.map((hlog, hi) => h('div', { key: hi, className: 'history-card last:mb-0' },
-                                h('p', { className: 'text-[10px] font-black text-blue-300' }, hlog.date),
-                                h('pre', { className: 'text-[10px] text-slate-400 whitespace-pre-wrap leading-tight' }, hlog.content)
-                            ))
-                        ),
-
-                        exData.map((ex, i) => h('div', { key: i, className: 'glass-strong p-5 rounded-2xl' },
-                            h('div', { className: 'flex justify-between mb-3' }, h('p', {className:'text-sm font-black text-slate-100'}, ex.name), h('span', {className:'text-[10px] font-bold text-blue-400'}, 'Target: '+ex.target)),
-                            ex.sets.map((set, si) => h('div', { key: si, className: 'flex gap-2 mb-2' },
-                                h('input', { placeholder: 'LBS', type: 'number', className: 'input-box flex-1', value: set.w, onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], w: e.target.value}; setExData(n); }}),
-                                h('input', { placeholder: 'REPS', type: 'number', className: 'input-box flex-1', value: set.r, onChange: (e) => { const n = [...exData]; n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; setExData(n); }})
-                            ))
-                        )),
-                        h('button', { onClick: saveWkt, className: 'fixed bottom-6 left-5 right-5 max-w-md mx-auto btn-success p-5 rounded-2xl font-black uppercase text-xs shadow-2xl' }, 'Complete & Sync')
+                        exData.map((ex, i) => {
+                            const lastWorkout = workouts.find(w => w.type === activeWkt);
+                            let lastPerformance = null;
+                            if (lastWorkout) {
+                                const lines = lastWorkout.content.split('\n\n');
+                                const exBlock = lines.find(block => block.startsWith(ex.name));
+                                if (exBlock) {
+                                    const sets = exBlock.split('\n')[1];
+                                    lastPerformance = sets;
+                                }
+                            }
+                            
+                            return h('div', { key: i, className: 'glass-strong p-5 rounded-2xl' },
+                                h('div', { className: 'flex justify-between mb-2' }, 
+                                    h('p', {className:'text-sm font-black text-slate-100'}, ex.name), 
+                                    h('span', {className:'text-[10px] font-bold text-blue-400'}, 'Target: '+ex.target)
+                                ),
+                                lastPerformance && h('div', { className: 'mb-3 p-2 bg-slate-900/50 rounded-lg border border-emerald-500/20' },
+                                    h('p', { className: 'text-[9px] text-emerald-400 font-bold uppercase mb-1' }, 'Last Time:'),
+                                    h('p', { className: 'text-[10px] text-slate-300 font-medium' }, lastPerformance)
+                                ),
+                                ex.sets.map((set, si) => {
+                                    const isCompleted = completedSets[`${i}-${si}`];
+                                    return h('div', { key: si, className: 'flex gap-2 mb-2 items-center' },
+                                        h('input', { 
+                                            placeholder: 'LBS', 
+                                            type: 'number', 
+                                            className: 'input-box flex-1', 
+                                            value: set.w, 
+                                            onChange: (e) => { 
+                                                const n = [...exData]; 
+                                                n[i].sets[si] = {...n[i].sets[si], w: e.target.value}; 
+                                                setExData(n); 
+                                            }
+                                        }),
+                                        h('input', { 
+                                            placeholder: 'REPS', 
+                                            type: 'number', 
+                                            className: 'input-box flex-1', 
+                                            value: set.r, 
+                                            onChange: (e) => { 
+                                                const n = [...exData]; 
+                                                n[i].sets[si] = {...n[i].sets[si], r: e.target.value}; 
+                                                setExData(n); 
+                                            }
+                                        }),
+                                        h('button', {
+                                            onClick: () => markSetComplete(i, si),
+                                            className: `w-10 h-10 rounded-lg ${isCompleted ? 'bg-emerald-500' : 'bg-slate-700'} flex items-center justify-center transition-all`
+                                        }, h('i', { className: `fas fa-check text-white text-sm ${isCompleted ? 'animate-pulse' : ''}` }))
+                                    );
+                                })
+                            );
+                        }),
+                        h('button', { onClick: saveWkt, className: 'fixed bottom-6 left-5 right-5 max-w-md mx-auto btn-success p-5 rounded-2xl font-black uppercase text-xs shadow-2xl hover:shadow-3xl' }, 
+                            h('i', {className: 'fas fa-trophy mr-2'}),
+                            'Complete & Sync'
+                        )
                     ) : null),
 
-                    tab === 'metrics' && h('div', { className: 'space-y-6' },
+                    tab === 'metrics' && h('div', { className: 'space-y-6 fade-in' },
+                        h(WeightChart, { metrics }),
                         h('div', { className: 'glass-strong p-6 rounded-3xl' },
                             h('div', { className: 'flex gap-3 mb-4' },
                                 h('input', { id: 'w-val', type: 'number', placeholder: 'Weight', className: 'input-box flex-1' }),
@@ -181,7 +455,10 @@
                                 document.getElementById('w-val').value = '';
                                 document.getElementById('bf-val').value = '';
                                 setTab('dashboard');
-                            }, className: 'w-full btn-success p-4 rounded-2xl font-black uppercase text-xs' }, 'Update Stats')
+                            }, className: 'w-full btn-success p-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:shadow-xl' }, 
+                                h('i', {className: 'fas fa-chart-line mr-2'}),
+                                'Update Stats'
+                            )
                         )
                     )
                 );
