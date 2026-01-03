@@ -284,333 +284,296 @@
             }
 
             function WeightChart({ metrics }) {
-                if (!metrics || metrics.length === 0) return null;
+                if (!metrics || metrics.length < 2) return h('div', { className: 'text-center p-10 glass-strong rounded-2xl text-slate-500 text-xs' }, 'Log at least 2 days to see trend');
 
-                const data = [...metrics].reverse().slice(-10);
-                const maxW = Math.max(...data.map(m => parseFloat(m.w) || 0));
-                const minW = Math.min(...data.map(m => parseFloat(m.w) || 0));
+                const data = [...metrics].reverse();
+                const weights = data.map(m => parseFloat(m.w));
+                const startW = weights[0];
+                const currentW = weights[weights.length - 1];
+                const diff = (currentW - startW).toFixed(1);
+
+                const maxW = Math.max(...weights);
+                const minW = Math.min(...weights);
                 const range = maxW - minW || 1;
 
                 return h('div', { className: 'glass-strong p-5 rounded-2xl mb-6 fade-in' },
-                    h('h3', { className: 'text-xs font-black uppercase tracking-wider text-slate-400 mb-4' }, 'Weight Progression'),
-                    h('div', { className: 'relative h-32' },
-                        h('svg', { width: '100%', height: '100%', className: 'overflow-visible' },
-                            h('polyline', {
-                                fill: 'none',
-                                stroke: 'url(#gradient)',
-                                strokeWidth: 3,
-                                points: data.map((m, i) => {
-                                    const x = (i / (data.length - 1)) * 100;
-                                    const y = 100 - (((parseFloat(m.w) - minW) / range) * 80 + 10);
-                                    return `${x}%,${y}%`;
-                                }).join(' ')
-                            }),
-                            h('defs', null,
-                                h('linearGradient', { id: 'gradient', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
-                                    h('stop', { offset: '0%', style: { stopColor: '#3b82f6', stopOpacity: 1 } }),
-                                    h('stop', { offset: '100%', style: { stopColor: '#10b981', stopOpacity: 1 } })
-                                )
-                            ),
-                            data.map((m, i) => {
-                                const x = (i / (data.length - 1)) * 100;
-                                const y = 100 - (((parseFloat(m.w) - minW) / range) * 80 + 10);
-                                return h('circle', {
-                                    key: i,
-                                    cx: `${x}%`,
-                                    cy: `${y}%`,
-                                    r: 4,
-                                    fill: '#3b82f6',
-                                    className: 'cursor-pointer'
-                                });
-                            })
+                    h('div', { className: 'flex justify-between items-end mb-4' },
+                        h('div', null,
+                            h('h3', { className: 'text-[10px] font-black uppercase text-slate-400' }, 'Total Progress'),
+                            h('p', { className: `text-2xl font-black ${diff <= 0 ? 'text-emerald-400' : 'text-rose-400'}` },
+                                diff <= 0 ? `${diff} lbs` : `+${diff} lbs`
+                            )
+                        ),
+                        h('div', { className: 'text-right' },
+                            h('p', { className: 'text-[9px] font-bold text-slate-500 uppercase' }, 'Current Velocity'),
+                            h('p', { className: 'text-sm font-bold' }, `${currentW} lbs`)
                         )
                     ),
-                    h('div', { className: 'flex justify-between text-[9px] text-slate-500 mt-2' },
-                        h('span', null, data[0]?.date),
-                        h('span', null, data[data.length - 1]?.date)
+                    h('div', { className: 'relative h-32 w-full' },
+                        h('svg', { width: '100%', height: '100%', viewBox: "0 0 100 100", preserveAspectRatio: "none", className: 'overflow-visible' },
+                            h('path', {
+                                d: `M ${data.map((m, i) => `${(i / (data.length - 1)) * 100},${100 - (((parseFloat(m.w) - minW) / range) * 80 + 10)}`).join(' L ')}`,
+                                fill: 'none',
+                                stroke: diff <= 0 ? '#10b981' : '#f43f5e',
+                                strokeWidth: 2,
+                                vectorEffect: 'non-scaling-stroke'
+                            })
+                        )
                     )
                 );
-                function WeightChart({ metrics }) {
-                    if (!metrics || metrics.length < 2) return h('div', { className: 'text-center p-10 glass-strong rounded-2xl text-slate-500 text-xs' }, 'Log at least 2 days to see trend');
+            }
+            function App() {
+                const [tab, setTab] = useState('dashboard');
+                const [workouts, setWorkouts] = useState([]);
+                const [metrics, setMetrics] = useState([]);
+                const [loading, setLoading] = useState(true);
+                const [activeWkt, setActiveWkt] = useState(null);
+                const [exData, setExData] = useState([]);
+                const [showTimer, setShowTimer] = useState(false);
+                const [completedSets, setCompletedSets] = useState({});
 
-                    const data = [...metrics].reverse();
-                    const weights = data.map(m => parseFloat(m.w));
-                    const startW = weights[0];
-                    const currentW = weights[weights.length - 1];
-                    const diff = (currentW - startW).toFixed(1);
+                const templates = {
+                    'Upper Push (Hypertrophy)': [{ n: 'Incline DB Press', s: 3, r: '8-10' }, { n: 'Dips (Chest Focused)', s: 3, r: '10-12' }, { n: 'Overhead Press', s: 3, r: '8-10' }, { n: 'Lateral Raises', s: 3, r: '12-15' }],
+                    'Upper Pull (Strength)': [{ n: 'Chin-Ups (Weighted)', s: 3, r: '6-8' }, { n: 'Hammer Curls', s: 3, r: '10-12' }, { n: 'Preacher Curls', s: 3, r: '10-12' }, { n: 'Face Pulls', s: 3, r: '15-20' }],
+                    'Lower Quad (Endurance)': [{ n: 'Back Squat', s: 4, r: '8-10' }, { n: 'Leg Press', s: 3, r: '12-15' }, { n: 'Bulgarian Split Squat', s: 3, r: '10-12' }, { n: 'Calf Raises', s: 4, r: '15-20' }],
+                    'Lower Ham (Power)': [{ n: 'Deadlift', s: 3, r: '5-8' }, { n: 'Romanian Deadlift', s: 3, r: '10-12' }, { n: 'Leg Curls', s: 3, r: '12-15' }, { n: 'Hanging Leg Raises', s: 3, r: '15-20' }],
+                    'Half-Marathon Prep': [{ n: 'Zone 2 Foundation Run', s: 1, r: '45 min' }, { n: 'Speed Intervals', s: 6, r: '400m' }],
+                    'KB Conditioning (Saturday)': [
+                        { n: 'KB Swings (Power)', s: 4, r: '15-20' },
+                        { n: 'Goblet Squats', s: 3, r: '12-15' },
+                        { n: 'Single-Arm KB Row', s: 3, r: '10-12' },
+                        { n: 'KB Farmer’s Carry', s: 3, r: '40 yards' }
+                    ],
+                    'KB Active Recovery (Sunday)': [
+                        { n: 'KB Halos (Mobility)', s: 2, r: '10 per side' },
+                        { n: 'Light KB Swings', s: 3, r: '10-12' },
+                        { n: 'Around the World', s: 2, r: '15 per side' }
+                    ]
+                };
 
-                    const maxW = Math.max(...weights);
-                    const minW = Math.min(...weights);
-                    const range = maxW - minW || 1;
+                useEffect(() => {
+                    async function fetchData() {
+                        try {
+                            const response = await fetch(SCRIPT_URL);
+                            const data = await response.json();
+                            setWorkouts(data.workouts || []);
+                            setMetrics(data.metrics || []);
+                        } catch (e) { console.error(e); }
+                        setLoading(false);
+                    }
+                    fetchData();
+                }, []);
 
-                    return h('div', { className: 'glass-strong p-5 rounded-2xl mb-6 fade-in' },
-                        h('div', { className: 'flex justify-between items-end mb-4' },
-                            h('div', null,
-                                h('h3', { className: 'text-[10px] font-black uppercase text-slate-400' }, 'Total Progress'),
-                                h('p', { className: `text-2xl font-black ${diff <= 0 ? 'text-emerald-400' : 'text-rose-400'}` },
-                                    diff <= 0 ? `${diff} lbs` : `+${diff} lbs`
+                const saveWkt = () => {
+                    const text = exData.map(e => `${e.name}\n${e.sets.map((s, i) => `S${i + 1}: ${s.w || '0'}lb x ${s.r || '0'}`).join(' | ')}`).join('\n\n');
+                    const log = { type: activeWkt, date: new Date().toLocaleDateString(), content: text };
+                    setWorkouts([log, ...workouts]);
+                    fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ dataType: 'lift', ...log }) });
+                    createConfetti();
+                    setActiveWkt(null);
+                    setCompletedSets({});
+                    setTab('dashboard');
+                };
+
+                const markSetComplete = (exIdx, setIdx) => {
+                    const key = `${exIdx}-${setIdx}`;
+                    setCompletedSets(prev => ({ ...prev, [key]: true }));
+                    setShowTimer(true);
+                    setTimeout(() => setShowTimer(false), 90000);
+                };
+
+                const stats = (() => {
+                    const latest = metrics[0] || { w: 130, bf: 0 };
+                    return { w: latest.w, bf: latest.bf, s: [...new Set(workouts.map(w => w.date))].length };
+                })();
+
+                const getWorkoutProgress = () => {
+                    if (!exData.length) return 0;
+                    const totalSets = exData.reduce((acc, ex) => acc + ex.sets.length, 0);
+                    const completed = Object.keys(completedSets).length;
+                    return (completed / totalSets) * 100;
+                };
+
+                if (loading) return h('div', { className: 'h-screen flex flex-col items-center justify-center' },
+                    h('i', { className: 'fas fa-dna text-5xl text-blue-500 animate-pulse' }),
+                    h('p', { className: 'mt-4 text-sm text-slate-400 animate-pulse' }, 'Loading your data...')
+                );
+
+                return h('div', { className: 'app-container max-w-md mx-auto p-5' },
+                    showTimer && h(RestTimer, { onComplete: () => setShowTimer(false) }),
+
+                    h('div', { className: 'text-center py-6 mb-4' },
+                        h('h1', { className: 'text-5xl font-black italic accent-text mb-1' }, 'PHASE 15'),
+                        h('p', { className: 'text-[9px] text-slate-500 font-bold uppercase tracking-[3px]' }, 'Elite Performance Tracker')
+                    ),
+
+                    h('div', { className: 'flex mb-6 glass-strong rounded-2xl overflow-hidden' },
+                        ['dashboard', 'plan', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
+                    ),
+
+                    tab === 'dashboard' && h('div', { className: 'space-y-6 fade-in' },
+                        h('div', { className: 'grid grid-cols-3 gap-3' },
+                            [{ l: 'Streak', v: stats.s, i: 'fa-fire', c: 'text-orange-500' }, { l: 'Weight', v: stats.w, i: 'fa-weight-scale', c: 'text-blue-500' }, { l: 'Body Fat', v: stats.bf + '%', i: 'fa-bolt', c: 'text-emerald-500' }].map((s, idx) =>
+                                h('div', { key: s.l, className: 'glass-strong p-4 rounded-2xl text-center stat-card', style: { animationDelay: `${idx * 0.1}s` } },
+                                    h('i', { className: `fas ${s.i} ${s.c} mb-2 text-xl` }),
+                                    h('p', { className: 'text-xl font-black' }, s.v),
+                                    h('p', { className: 'text-[8px] uppercase font-bold text-slate-400' }, s.l)
                                 )
-                            ),
-                            h('div', { className: 'text-right' },
-                                h('p', { className: 'text-[9px] font-bold text-slate-500 uppercase' }, 'Current Velocity'),
-                                h('p', { className: 'text-sm font-bold' }, `${currentW} lbs`)
                             )
                         ),
-                        h('div', { className: 'relative h-32 w-full' },
-                            h('svg', { width: '100%', height: '100%', viewBox: "0 0 100 100", preserveAspectRatio: "none", className: 'overflow-visible' },
-                                h('path', {
-                                    d: `M ${data.map((m, i) => `${(i / (data.length - 1)) * 100},${100 - (((parseFloat(m.w) - minW) / range) * 80 + 10)}`).join(' L ')}`,
-                                    fill: 'none',
-                                    stroke: diff <= 0 ? '#10b981' : '#f43f5e',
-                                    strokeWidth: 2,
-                                    vectorEffect: 'non-scaling-stroke'
-                                })
-                            )
-                        )
-                    );
-                }
-                function App() {
-                    const [tab, setTab] = useState('dashboard');
-                    const [workouts, setWorkouts] = useState([]);
-                    const [metrics, setMetrics] = useState([]);
-                    const [loading, setLoading] = useState(true);
-                    const [activeWkt, setActiveWkt] = useState(null);
-                    const [exData, setExData] = useState([]);
-                    const [showTimer, setShowTimer] = useState(false);
-                    const [completedSets, setCompletedSets] = useState({});
-
-                    const templates = {
-                        'Upper Push (Hypertrophy)': [{ n: 'Incline DB Press', s: 3, r: '8-10' }, { n: 'Dips (Chest Focused)', s: 3, r: '10-12' }, { n: 'Overhead Press', s: 3, r: '8-10' }, { n: 'Lateral Raises', s: 3, r: '12-15' }],
-                        'Upper Pull (Strength)': [{ n: 'Chin-Ups (Weighted)', s: 3, r: '6-8' }, { n: 'Hammer Curls', s: 3, r: '10-12' }, { n: 'Preacher Curls', s: 3, r: '10-12' }, { n: 'Face Pulls', s: 3, r: '15-20' }],
-                        'Lower Quad (Endurance)': [{ n: 'Back Squat', s: 4, r: '8-10' }, { n: 'Leg Press', s: 3, r: '12-15' }, { n: 'Bulgarian Split Squat', s: 3, r: '10-12' }, { n: 'Calf Raises', s: 4, r: '15-20' }],
-                        'Lower Ham (Power)': [{ n: 'Deadlift', s: 3, r: '5-8' }, { n: 'Romanian Deadlift', s: 3, r: '10-12' }, { n: 'Leg Curls', s: 3, r: '12-15' }, { n: 'Hanging Leg Raises', s: 3, r: '15-20' }],
-                        'Half-Marathon Prep': [{ n: 'Zone 2 Foundation Run', s: 1, r: '45 min' }, { n: 'Speed Intervals', s: 6, r: '400m' }],
-                        'KB Conditioning (Saturday)': [
-                            { n: 'KB Swings (Power)', s: 4, r: '15-20' },
-                            { n: 'Goblet Squats', s: 3, r: '12-15' },
-                            { n: 'Single-Arm KB Row', s: 3, r: '10-12' },
-                            { n: 'KB Farmer’s Carry', s: 3, r: '40 yards' }
-                        ],
-                        'KB Active Recovery (Sunday)': [
-                            { n: 'KB Halos (Mobility)', s: 2, r: '10 per side' },
-                            { n: 'Light KB Swings', s: 3, r: '10-12' },
-                            { n: 'Around the World', s: 2, r: '15 per side' }
-                        ]
-                    };
-
-                    useEffect(() => {
-                        async function fetchData() {
-                            try {
-                                const response = await fetch(SCRIPT_URL);
-                                const data = await response.json();
-                                setWorkouts(data.workouts || []);
-                                setMetrics(data.metrics || []);
-                            } catch (e) { console.error(e); }
-                            setLoading(false);
-                        }
-                        fetchData();
-                    }, []);
-
-                    const saveWkt = () => {
-                        const text = exData.map(e => `${e.name}\n${e.sets.map((s, i) => `S${i + 1}: ${s.w || '0'}lb x ${s.r || '0'}`).join(' | ')}`).join('\n\n');
-                        const log = { type: activeWkt, date: new Date().toLocaleDateString(), content: text };
-                        setWorkouts([log, ...workouts]);
-                        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ dataType: 'lift', ...log }) });
-                        createConfetti();
-                        setActiveWkt(null);
-                        setCompletedSets({});
-                        setTab('dashboard');
-                    };
-
-                    const markSetComplete = (exIdx, setIdx) => {
-                        const key = `${exIdx}-${setIdx}`;
-                        setCompletedSets(prev => ({ ...prev, [key]: true }));
-                        setShowTimer(true);
-                        setTimeout(() => setShowTimer(false), 90000);
-                    };
-
-                    const stats = (() => {
-                        const latest = metrics[0] || { w: 130, bf: 0 };
-                        return { w: latest.w, bf: latest.bf, s: [...new Set(workouts.map(w => w.date))].length };
-                    })();
-
-                    const getWorkoutProgress = () => {
-                        if (!exData.length) return 0;
-                        const totalSets = exData.reduce((acc, ex) => acc + ex.sets.length, 0);
-                        const completed = Object.keys(completedSets).length;
-                        return (completed / totalSets) * 100;
-                    };
-
-                    if (loading) return h('div', { className: 'h-screen flex flex-col items-center justify-center' },
-                        h('i', { className: 'fas fa-dna text-5xl text-blue-500 animate-pulse' }),
-                        h('p', { className: 'mt-4 text-sm text-slate-400 animate-pulse' }, 'Loading your data...')
-                    );
-
-                    return h('div', { className: 'app-container max-w-md mx-auto p-5' },
-                        showTimer && h(RestTimer, { onComplete: () => setShowTimer(false) }),
-
-                        h('div', { className: 'text-center py-6 mb-4' },
-                            h('h1', { className: 'text-5xl font-black italic accent-text mb-1' }, 'PHASE 15'),
-                            h('p', { className: 'text-[9px] text-slate-500 font-bold uppercase tracking-[3px]' }, 'Elite Performance Tracker')
-                        ),
-
-                        h('div', { className: 'flex mb-6 glass-strong rounded-2xl overflow-hidden' },
-                            ['dashboard', 'plan', 'metrics'].map(t => h('button', { key: t, onClick: () => setTab(t), className: `tab-btn ${tab === t ? 'tab-active' : ''}` }, t))
-                        ),
-
-                        tab === 'dashboard' && h('div', { className: 'space-y-6 fade-in' },
-                            h('div', { className: 'grid grid-cols-3 gap-3' },
-                                [{ l: 'Streak', v: stats.s, i: 'fa-fire', c: 'text-orange-500' }, { l: 'Weight', v: stats.w, i: 'fa-weight-scale', c: 'text-blue-500' }, { l: 'Body Fat', v: stats.bf + '%', i: 'fa-bolt', c: 'text-emerald-500' }].map((s, idx) =>
-                                    h('div', { key: s.l, className: 'glass-strong p-4 rounded-2xl text-center stat-card', style: { animationDelay: `${idx * 0.1}s` } },
-                                        h('i', { className: `fas ${s.i} ${s.c} mb-2 text-xl` }),
-                                        h('p', { className: 'text-xl font-black' }, s.v),
-                                        h('p', { className: 'text-[8px] uppercase font-bold text-slate-400' }, s.l)
-                                    )
-                                )
-                            ),
-                            h('div', { className: 'glass-strong p-5 rounded-2xl' },
-                                h('h3', { className: 'text-xs font-black uppercase tracking-wider text-slate-400 mb-4' }, 'Recent Training History'),
-                                workouts.length > 0 ? workouts.slice(0, 3).map((w, i) => h('div', { key: i, className: 'mb-4 last:mb-0 border-l-2 border-blue-500/30 pl-4 py-1' },
-                                    h('div', { className: 'flex justify-between text-[11px] mb-1' },
-                                        h('span', { className: 'font-black text-blue-400 uppercase' }, w.type),
-                                        h('span', { className: 'text-slate-500 font-bold' }, w.date)
-                                    ),
-                                    h('pre', { className: 'text-[10px] text-slate-300 font-medium leading-relaxed whitespace-pre-wrap' }, w.content)
-                                )) : h('p', { className: 'text-xs text-slate-500 text-center py-4 italic' }, 'No workouts logged yet.')
-                            ),
-                            h('button', { onClick: () => setTab('plan'), className: 'w-full btn-primary p-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:shadow-xl' },
-                                h('i', { className: 'fas fa-dumbbell mr-2' }),
-                                'Begin Daily Session'
-                            )
-                        ),
-
-                        tab === 'plan' && h('div', { className: 'space-y-3 fade-in' },
-                            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((d, idx) => {
-
-                                const dayPlan = {
-                                    Monday: 'Upper Push (Hypertrophy)',
-                                    Tuesday: 'Lower Ham (power)',
-                                    Wednesday: 'Lower Quad (Endurance)',
-                                    Thursday: 'Upper Pull (Strength)',
-                                    Friday: 'Long Run (Half Marathon plan)',
-                                    Saturday: 'KB Conditioning (Saturday)', // Swapped out running for KB Strength
-                                    Sunday: 'KB Active Recovery (Sunday)'  // Upgraded Rest to Active Recovery
-                                };
-                                return h('div', { key: d, className: 'glass-strong p-5 rounded-2xl flex justify-between items-center', style: { animationDelay: `${idx * 0.05}s` } },
-                                    h('div', null,
-                                        h('p', { className: 'text-[10px] font-bold text-blue-400 uppercase mb-1' }, d),
-                                        h('p', { className: 'text-sm font-black' }, dayPlan[d])
-                                    ),
-                                    !dayPlan[d].includes('Rest') && h('button', {
-                                        onClick: () => {
-                                            setActiveWkt(dayPlan[d]);
-                                            setExData(templates[dayPlan[d]].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({ w: '', r: '' }) })));
-                                            setCompletedSets({});
-                                            setTab('workout');
-                                        },
-                                        className: 'btn-primary px-4 py-2 rounded-xl font-black text-[10px] shadow-md hover:shadow-lg'
-                                    }, 'START')
-                                );
-                            })
-                        ),
-
-                        tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-24 fade-in' },
-                            h('div', { className: 'flex justify-between items-center mb-4' },
-                                h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
-                                h('div', { className: 'flex items-center gap-2' },
-                                    h(ProgressRing, { progress: getWorkoutProgress(), size: 50 }),
-                                    h('span', { className: 'text-xs font-bold text-slate-400' }, `${Math.round(getWorkoutProgress())}%`)
-                                )
-                            ),
-                            exData.map((ex, i) => {
-                                const lastWorkout = workouts.find(w => w.type === activeWkt);
-                                let lastPerformance = null;
-                                if (lastWorkout) {
-                                    const lines = lastWorkout.content.split('\n\n');
-                                    const exBlock = lines.find(block => block.startsWith(ex.name));
-                                    if (exBlock) {
-                                        const sets = exBlock.split('\n')[1];
-                                        lastPerformance = sets;
-                                    }
-                                }
-
-                                return h('div', { key: i, className: 'glass-strong p-5 rounded-2xl' },
-                                    h('div', { className: 'flex justify-between mb-2' },
-                                        h('p', { className: 'text-sm font-black text-slate-100' }, ex.name),
-                                        h('span', { className: 'text-[10px] font-bold text-blue-400' }, 'Target: ' + ex.target)
-                                    ),
-                                    lastPerformance && h('div', { className: 'mb-3 p-2 bg-slate-900/50 rounded-lg border border-emerald-500/20' },
-                                        h('p', { className: 'text-[9px] text-emerald-400 font-bold uppercase mb-1' }, 'Last Time:'),
-                                        h('p', { className: 'text-[10px] text-slate-300 font-medium' }, lastPerformance)
-                                    ),
-                                    ex.sets.map((set, si) => {
-                                        const isCompleted = completedSets[`${i}-${si}`];
-                                        return h('div', { key: si, className: 'flex gap-2 mb-2 items-center' },
-                                            h('input', {
-                                                placeholder: 'LBS',
-                                                type: 'number',
-                                                className: 'input-box flex-1',
-                                                value: set.w,
-                                                onChange: (e) => {
-                                                    const n = [...exData];
-                                                    n[i].sets[si] = { ...n[i].sets[si], w: e.target.value };
-                                                    setExData(n);
-                                                }
-                                            }),
-                                            h('input', {
-                                                placeholder: 'REPS',
-                                                type: 'number',
-                                                className: 'input-box flex-1',
-                                                value: set.r,
-                                                onChange: (e) => {
-                                                    const n = [...exData];
-                                                    n[i].sets[si] = { ...n[i].sets[si], r: e.target.value };
-                                                    setExData(n);
-                                                }
-                                            }),
-                                            h('button', {
-                                                onClick: () => markSetComplete(i, si),
-                                                className: `w-10 h-10 rounded-lg ${isCompleted ? 'bg-emerald-500' : 'bg-slate-700'} flex items-center justify-center transition-all`
-                                            }, h('i', { className: `fas fa-check text-white text-sm ${isCompleted ? 'animate-pulse' : ''}` }))
-                                        );
-                                    })
-                                );
-                            }),
-                            h('button', { onClick: saveWkt, className: 'fixed bottom-6 left-5 right-5 max-w-md mx-auto btn-success p-5 rounded-2xl font-black uppercase text-xs shadow-2xl hover:shadow-3xl' },
-                                h('i', { className: 'fas fa-trophy mr-2' }),
-                                'Complete & Sync'
-                            )
-                        ) : null),
-
-                        tab === 'metrics' && h('div', { className: 'space-y-6 fade-in' },
-                            h(WeightChart, { metrics }),
-                            h('div', { className: 'glass-strong p-6 rounded-3xl' },
-                                h('div', { className: 'flex gap-3 mb-4' },
-                                    h('input', { id: 'w-val', type: 'number', placeholder: 'Weight', className: 'input-box flex-1' }),
-                                    h('input', { id: 'bf-val', type: 'number', placeholder: 'BF %', className: 'input-box flex-1' })
+                        h('div', { className: 'glass-strong p-5 rounded-2xl' },
+                            h('h3', { className: 'text-xs font-black uppercase tracking-wider text-slate-400 mb-4' }, 'Recent Training History'),
+                            workouts.length > 0 ? workouts.slice(0, 3).map((w, i) => h('div', { key: i, className: 'mb-4 last:mb-0 border-l-2 border-blue-500/30 pl-4 py-1' },
+                                h('div', { className: 'flex justify-between text-[11px] mb-1' },
+                                    h('span', { className: 'font-black text-blue-400 uppercase' }, w.type),
+                                    h('span', { className: 'text-slate-500 font-bold' }, w.date)
                                 ),
-                                h('button', {
-                                    onClick: () => {
-                                        const w = document.getElementById('w-val').value;
-                                        const bf = document.getElementById('bf-val').value;
-                                        if (!w) return;
-                                        const log = { w, bf, date: new Date().toLocaleDateString() };
-                                        setMetrics([log, ...metrics]);
-                                        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ dataType: 'metric', ...log }) });
-                                        document.getElementById('w-val').value = '';
-                                        document.getElementById('bf-val').value = '';
-                                        setTab('dashboard');
-                                    }, className: 'w-full btn-success p-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:shadow-xl'
-                                },
-                                    h('i', { className: 'fas fa-chart-line mr-2' }),
-                                    'Update Stats'
-                                )
-                            )
+                                h('pre', { className: 'text-[10px] text-slate-300 font-medium leading-relaxed whitespace-pre-wrap' }, w.content)
+                            )) : h('p', { className: 'text-xs text-slate-500 text-center py-4 italic' }, 'No workouts logged yet.')
+                        ),
+                        h('button', { onClick: () => setTab('plan'), className: 'w-full btn-primary p-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:shadow-xl' },
+                            h('i', { className: 'fas fa-dumbbell mr-2' }),
+                            'Begin Daily Session'
                         )
-                    );
-                }
-                ReactDOM.createRoot(document.getElementById('root')).render(h(App));
-            });
+                    ),
+
+                    tab === 'plan' && h('div', { className: 'space-y-3 fade-in' },
+                        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((d, idx) => {
+
+                            const dayPlan = {
+                                Monday: 'Upper Push (Hypertrophy)',
+                                Tuesday: 'Lower Ham (power)',
+                                Wednesday: 'Lower Quad (Endurance)',
+                                Thursday: 'Upper Pull (Strength)',
+                                Friday: 'Long Run (Half Marathon plan)',
+                                Saturday: 'KB Conditioning (Saturday)', // Swapped out running for KB Strength
+                                Sunday: 'KB Active Recovery (Sunday)'  // Upgraded Rest to Active Recovery
+                            };
+                            return h('div', { key: d, className: 'glass-strong p-5 rounded-2xl flex justify-between items-center', style: { animationDelay: `${idx * 0.05}s` } },
+                                h('div', null,
+                                    h('p', { className: 'text-[10px] font-bold text-blue-400 uppercase mb-1' }, d),
+                                    h('p', { className: 'text-sm font-black' }, dayPlan[d])
+                                ),
+                                !dayPlan[d].includes('Rest') && h('button', {
+                                    onClick: () => {
+                                        setActiveWkt(dayPlan[d]);
+                                        setExData(templates[dayPlan[d]].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({ w: '', r: '' }) })));
+                                        setCompletedSets({});
+                                        setTab('workout');
+                                    },
+                                    className: 'btn-primary px-4 py-2 rounded-xl font-black text-[10px] shadow-md hover:shadow-lg'
+                                }, 'START')
+                            );
+                        })
+                    ),
+
+                    tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-24 fade-in' },
+                        h('div', { className: 'flex justify-between items-center mb-4' },
+                            h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
+                            h('div', { className: 'flex items-center gap-2' },
+                                h(ProgressRing, { progress: getWorkoutProgress(), size: 50 }),
+                                h('span', { className: 'text-xs font-bold text-slate-400' }, `${Math.round(getWorkoutProgress())}%`)
+                            )
+                        ),
+                        exData.map((ex, i) => {
+                            const lastWorkout = workouts.find(w => w.type === activeWkt);
+                            let lastPerformance = null;
+                            if (lastWorkout) {
+                                const lines = lastWorkout.content.split('\n\n');
+                                const exBlock = lines.find(block => block.startsWith(ex.name));
+                                if (exBlock) {
+                                    const sets = exBlock.split('\n')[1];
+                                    lastPerformance = sets;
+                                }
+                            }
+
+                            return h('div', { key: i, className: 'glass-strong p-5 rounded-2xl' },
+                                h('div', { className: 'flex justify-between mb-2' },
+                                    h('p', { className: 'text-sm font-black text-slate-100' }, ex.name),
+                                    h('span', { className: 'text-[10px] font-bold text-blue-400' }, 'Target: ' + ex.target)
+                                ),
+                                lastPerformance && h('div', { className: 'mb-3 p-2 bg-slate-900/50 rounded-lg border border-emerald-500/20' },
+                                    h('p', { className: 'text-[9px] text-emerald-400 font-bold uppercase mb-1' }, 'Last Time:'),
+                                    h('p', { className: 'text-[10px] text-slate-300 font-medium' }, lastPerformance)
+                                ),
+                                ex.sets.map((set, si) => {
+                                    const isCompleted = completedSets[`${i}-${si}`];
+                                    return h('div', { key: si, className: 'flex gap-2 mb-2 items-center' },
+                                        h('input', {
+                                            placeholder: 'LBS',
+                                            type: 'number',
+                                            className: 'input-box flex-1',
+                                            value: set.w,
+                                            onChange: (e) => {
+                                                const n = [...exData];
+                                                n[i].sets[si] = { ...n[i].sets[si], w: e.target.value };
+                                                setExData(n);
+                                            }
+                                        }),
+                                        h('input', {
+                                            placeholder: 'REPS',
+                                            type: 'number',
+                                            className: 'input-box flex-1',
+                                            value: set.r,
+                                            onChange: (e) => {
+                                                const n = [...exData];
+                                                n[i].sets[si] = { ...n[i].sets[si], r: e.target.value };
+                                                setExData(n);
+                                            }
+                                        }),
+                                        h('button', {
+                                            onClick: () => markSetComplete(i, si),
+                                            className: `w-10 h-10 rounded-lg ${isCompleted ? 'bg-emerald-500' : 'bg-slate-700'} flex items-center justify-center transition-all`
+                                        }, h('i', { className: `fas fa-check text-white text-sm ${isCompleted ? 'animate-pulse' : ''}` }))
+                                    );
+                                })
+                            );
+                        }),
+                        h('button', { onClick: saveWkt, className: 'fixed bottom-6 left-5 right-5 max-w-md mx-auto btn-success p-5 rounded-2xl font-black uppercase text-xs shadow-2xl hover:shadow-3xl' },
+                            h('i', { className: 'fas fa-trophy mr-2' }),
+                            'Complete & Sync'
+                        )
+                    ) : null),
+
+                    tab === 'metrics' && h('div', { className: 'space-y-6 fade-in' },
+                        h(WeightChart, { metrics }),
+                        h('div', { className: 'glass-strong p-6 rounded-3xl' },
+                            h('div', { className: 'flex gap-3 mb-4' },
+                                h('input', { id: 'w-val', type: 'number', step: '0.1', placeholder: 'Daily Weight', className: 'input-box flex-1' }),
+                                h('input', { id: 'bf-val', type: 'number', step: '0.1', placeholder: 'BF %', className: 'input-box flex-1' })
+                            ),
+                            h('button', {
+                                onClick: () => {
+                                    const w = document.getElementById('w-val').value;
+                                    const bf = document.getElementById('bf-val').value;
+                                    if (!w) return;
+                                    const log = { w, bf, date: new Date().toLocaleDateString() };
+                                    setMetrics([log, ...metrics]);
+                                    fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ dataType: 'metric', ...log }) });
+                                    document.getElementById('w-val').value = '';
+                                    document.getElementById('bf-val').value = '';
+                                    setTab('dashboard');
+                                }, className: 'w-full btn-success p-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:shadow-xl'
+                            },
+                                h('i', { className: 'fas fa-chart-line mr-2' }),
+                                'Update Stats'
+                            )
+                        ),
+                        h('div', { className: 'glass-strong p-4 rounded-2xl' },
+                            h('h4', { className: 'text-[10px] font-black text-slate-500 uppercase mb-3' }, 'Daily Log History'),
+                            metrics.slice(0, 7).map((m, i) => h('div', { key: i, className: 'flex justify-between py-2 border-b border-white/5 last:border-0 text-xs' },
+                                h('span', { className: 'text-slate-400 font-bold' }, m.date),
+                                h('div', null,
+                                    h('span', { className: 'font-black mr-2' }, `${m.w} lbs`),
+                                    h('span', { className: 'text-blue-400 font-bold' }, `${m.bf}%`)
+                                )
+                            ))
+                        )
+                    )
+                );
+            }
+            ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+        });
     </script>
 </body>
 
