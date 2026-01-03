@@ -41,6 +41,7 @@
         }
         .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
         .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .history-card { border-left: 3px solid #3b82f6; padding-left: 12px; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -72,7 +73,9 @@
                         try {
                             const response = await fetch(SCRIPT_URL);
                             const data = await response.json();
-                            setWorkouts(data.workouts || []);
+                            // Sort by date descending (assuming date format is localizable)
+                            const sortedWkts = (data.workouts || []).sort((a,b) => new Date(b.date) - new Date(a.date));
+                            setWorkouts(sortedWkts);
                             setMetrics(data.metrics || []);
                         } catch (e) { console.error(e); }
                         setLoading(false);
@@ -93,6 +96,9 @@
                     return { w: latest.w, bf: latest.bf, s: [...new Set(workouts.map(w => w.date))].length };
                 })();
 
+                // Logic to get history for the current active workout
+                const activeHistory = workouts.filter(w => w.type === activeWkt).slice(0, 2);
+
                 if (loading) return h('div', {className: 'h-screen flex flex-col items-center justify-center'}, h('i', {className: 'fas fa-dna text-5xl text-blue-500 animate-pulse'}));
 
                 return h('div', { className: 'app-container max-w-md mx-auto p-5' },
@@ -112,14 +118,14 @@
                             )
                         ),
                         h('div', { className: 'glass-strong p-5 rounded-2xl' },
-                            h('h3', { className: 'text-xs font-black uppercase tracking-wider text-slate-400 mb-4' }, 'Recent Training History'),
-                            workouts.length > 0 ? workouts.slice(0, 3).map((w, i) => h('div', { key: i, className: 'mb-4 last:mb-0 border-l-2 border-blue-500/30 pl-4 py-1' },
+                            h('h3', { className: 'text-xs font-black uppercase tracking-wider text-slate-400 mb-4' }, 'Last Activity'),
+                            workouts.length > 0 ? h('div', { className: 'border-l-2 border-emerald-500/30 pl-4 py-1' },
                                 h('div', { className: 'flex justify-between text-[11px] mb-1' },
-                                    h('span', { className: 'font-black text-blue-400 uppercase' }, w.type),
-                                    h('span', { className: 'text-slate-500 font-bold' }, w.date)
+                                    h('span', { className: 'font-black text-emerald-400 uppercase' }, workouts[0].type),
+                                    h('span', { className: 'text-slate-500 font-bold' }, workouts[0].date)
                                 ),
-                                h('pre', { className: 'text-[10px] text-slate-300 font-medium leading-relaxed whitespace-pre-wrap' }, w.content)
-                            )) : h('p', {className: 'text-xs text-slate-500 text-center py-4 italic'}, 'No workouts logged yet.')
+                                h('pre', { className: 'text-[10px] text-slate-300 font-medium leading-relaxed whitespace-pre-wrap' }, workouts[0].content)
+                            ) : h('p', {className: 'text-xs text-slate-500 text-center py-4 italic'}, 'No sessions logged.')
                         ),
                         h('button', { onClick: () => setTab('plan'), className: 'w-full btn-primary p-5 rounded-2xl font-black uppercase text-xs tracking-widest' }, 'Begin Daily Session')
                     ),
@@ -135,7 +141,20 @@
                     ),
 
                     tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-24' },
-                        h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
+                        h('div', { className: 'flex justify-between items-end' },
+                            h('h2', { className: 'text-xl font-black text-blue-400 italic' }, activeWkt),
+                            h('button', { onClick: () => setTab('plan'), className: 'text-[10px] text-slate-500 font-bold' }, 'CANCEL')
+                        ),
+
+                        // Contextual History for this specific workout
+                        activeHistory.length > 0 && h('div', { className: 'glass-strong p-4 rounded-2xl border-dashed border-slate-700' },
+                            h('h3', { className: 'text-[9px] font-black uppercase text-slate-500 mb-3 tracking-widest' }, 'Previous Performance'),
+                            activeHistory.map((hlog, hi) => h('div', { key: hi, className: 'history-card last:mb-0' },
+                                h('p', { className: 'text-[10px] font-black text-blue-300' }, hlog.date),
+                                h('pre', { className: 'text-[10px] text-slate-400 whitespace-pre-wrap leading-tight' }, hlog.content)
+                            ))
+                        ),
+
                         exData.map((ex, i) => h('div', { key: i, className: 'glass-strong p-5 rounded-2xl' },
                             h('div', { className: 'flex justify-between mb-3' }, h('p', {className:'text-sm font-black text-slate-100'}, ex.name), h('span', {className:'text-[10px] font-bold text-blue-400'}, 'Target: '+ex.target)),
                             ex.sets.map((set, si) => h('div', { key: si, className: 'flex gap-2 mb-2' },
