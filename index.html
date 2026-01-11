@@ -331,6 +331,9 @@
                 const [exData, setExData] = useState([]);
                 const [showTimer, setShowTimer] = useState(false);
                 const [completedSets, setCompletedSets] = useState({});
+                
+                // New state for Sunday selection
+                const [sundayChoice, setSundayChoice] = useState('Upper Push (Hypertrophy)');
 
                 const templates = {
                     'Upper Push (Hypertrophy)': [{ n: 'Incline DB Press', s: 3, r: '8-10' }, { n: 'Dips (Chest Focused)', s: 3, r: '10-12' }, { n: 'Overhead Press', s: 3, r: '8-10' }, { n: 'Lateral Raises', s: 3, r: '12-15' }],
@@ -379,11 +382,11 @@
                     const key = `${exIdx}-${setIdx}`;
                     setCompletedSets(prev => ({ ...prev, [key]: true }));
                     setShowTimer(true);
-                    setTimeout(() => setShowTimer(false), 90000);
+                    // Standard 90s timer
                 };
 
                 const stats = (() => {
-                    const latest = metrics[0] || { w: 130, bf: 0 };
+                    const latest = metrics[0] || { w: 0, bf: 0 };
                     return { w: latest.w, bf: latest.bf, s: [...new Set(workouts.map(w => w.date))].length };
                 })();
 
@@ -439,34 +442,47 @@
 
                     tab === 'plan' && h('div', { className: 'space-y-3 fade-in' },
                         ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((d, idx) => {
-
                             const dayPlan = {
-                                Monday: 'Upper Push (Hypertrophy)',
-                                Tuesday: 'Lower Ham (Power)',
+                                Monday: 'Lower Ham (Power)',
+                                Tuesday: 'Upper Push (Hypertrophy)',
                                 Wednesday: 'Lower Quad (Endurance)',
                                 Thursday: 'Upper Pull (Strength)',
-                                Friday: 'Long Run (Half Marathon plan)',
-                                Saturday: 'KB Conditioning (Saturday)', // Swapped out running for KB Strength
-                                Sunday: 'KB Active Recovery (Sunday)'  // Upgraded Rest to Active Recovery
+                                Friday: 'Half-Marathon Prep',
+                                Saturday: 'KB Conditioning (Saturday)',
+                                Sunday: 'Free Choice Sunday' // Label changed
                             };
-                            return h('div', { key: d, className: 'glass-strong p-5 rounded-2xl flex justify-between items-center', style: { animationDelay: `${idx * 0.05}s` } },
-                                h('div', null,
-                                    h('p', { className: 'text-[10px] font-bold text-blue-400 uppercase mb-1' }, d),
-                                    h('p', { className: 'text-sm font-black' }, dayPlan[d])
+
+                            const isSunday = d === 'Sunday';
+                            const activePlan = isSunday ? sundayChoice : dayPlan[d];
+
+                            return h('div', { key: d, className: 'glass-strong p-5 rounded-2xl flex flex-col gap-3', style: { animationDelay: `${idx * 0.05}s` } },
+                                h('div', { className: 'flex justify-between items-center' },
+                                    h('div', null,
+                                        h('p', { className: 'text-[10px] font-bold text-blue-400 uppercase mb-1' }, d),
+                                        h('p', { className: 'text-sm font-black' }, isSunday ? 'Free Choice: ' + activePlan : activePlan)
+                                    ),
+                                    h('button', {
+                                        onClick: () => {
+                                            setActiveWkt(activePlan);
+                                            setExData(templates[activePlan].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({ w: '', r: '' }) })));
+                                            setCompletedSets({});
+                                            setTab('workout');
+                                        },
+                                        className: 'btn-primary px-4 py-2 rounded-xl font-black text-[10px] shadow-md hover:shadow-lg'
+                                    }, 'START')
                                 ),
-                                !dayPlan[d].includes('Rest') && h('button', {
-                                    onClick: () => {
-                                        setActiveWkt(dayPlan[d]);
-                                        setExData(templates[dayPlan[d]].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({ w: '', r: '' }) })));
-                                        setCompletedSets({});
-                                        setTab('workout');
-                                    },
-                                    className: 'btn-primary px-4 py-2 rounded-xl font-black text-[10px] shadow-md hover:shadow-lg'
-                                }, 'START')
+                                // Sunday Dropdown Polishing
+                                isSunday && h('div', { className: 'pt-2 border-t border-white/10' },
+                                    h('p', { className: 'text-[9px] text-slate-500 uppercase font-bold mb-2' }, 'Select Sunday Protocol:'),
+                                    h('select', {
+                                        className: 'w-full bg-slate-900 border border-blue-500/30 rounded-lg p-2 text-[10px] font-bold text-slate-200 outline-none focus:border-blue-500',
+                                        value: sundayChoice,
+                                        onChange: (e) => setSundayChoice(e.target.value)
+                                    }, Object.keys(templates).map(name => h('option', { key: name, value: name }, name)))
+                                )
                             );
                         })
                     ),
-
                     tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-24 fade-in' },
                         h('div', { className: 'flex justify-between items-center mb-4' },
                             h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
