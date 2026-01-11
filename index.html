@@ -331,7 +331,7 @@
                 const [exData, setExData] = useState([]);
                 const [showTimer, setShowTimer] = useState(false);
                 const [completedSets, setCompletedSets] = useState({});
-                
+
                 // New state for Sunday selection
                 const [sundayChoice, setSundayChoice] = useState('Upper Push (Hypertrophy)');
 
@@ -341,17 +341,9 @@
                     'Lower Quad (Endurance)': [{ n: 'Back Squat', s: 4, r: '8-10' }, { n: 'Leg Press', s: 3, r: '12-15' }, { n: 'Bulgarian Split Squat', s: 3, r: '10-12' }, { n: 'Calf Raises', s: 4, r: '15-20' }],
                     'Lower Ham (Power)': [{ n: 'Deadlift', s: 3, r: '5-8' }, { n: 'Romanian Deadlift', s: 3, r: '10-12' }, { n: 'Leg Curls', s: 3, r: '12-15' }, { n: 'Hanging Leg Raises', s: 3, r: '15-20' }],
                     'Half-Marathon Prep': [{ n: 'Zone 2 Foundation Run', s: 1, r: '45 min' }, { n: 'Speed Intervals', s: 6, r: '400m' }],
-                    'KB Conditioning (Saturday)': [
-                        { n: 'KB Swings (Power)', s: 4, r: '15-20' },
-                        { n: 'Goblet Squats', s: 3, r: '12-15' },
-                        { n: 'Single-Arm KB Row', s: 3, r: '10-12' },
-                        { n: 'KB Farmer’s Carry', s: 3, r: '40 yards' }
-                    ],
-                    'KB Active Recovery (Sunday)': [
-                        { n: 'KB Halos (Mobility)', s: 2, r: '10 per side' },
-                        { n: 'Light KB Swings', s: 3, r: '10-12' },
-                        { n: 'Around the World', s: 2, r: '15 per side' }
-                    ]
+                    'KB Conditioning (Saturday)': [{ n: 'KB Swings (Power)', s: 4, r: '15-20' }, { n: 'Goblet Squats', s: 3, r: '12-15' }, { n: 'Single-Arm KB Row', s: 3, r: '10-12' }, { n: 'KB Farmer’s Carry', s: 3, r: '40 yards' }],
+                    'KB Active Recovery (Sunday)': [{ n: 'KB Halos (Mobility)', s: 2, r: '10 per side' }, { n: 'Light KB Swings', s: 3, r: '10-12' }, { n: 'Around the World', s: 2, r: '15 per side' }],
+                    'CUSTOM (Manual Entry)': [{ n: 'Custom Exercise 1', s: 3, r: 'Goal' }] // Placeholder for manual mode
                 };
 
                 useEffect(() => {
@@ -440,42 +432,50 @@
                         )
                     ),
 
+                    // ... inside App component ...
+
                     tab === 'plan' && h('div', { className: 'space-y-3 fade-in' },
                         ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((d, idx) => {
-                            const dayPlan = {
+                            const defaultPlans = {
                                 Monday: 'Lower Ham (Power)',
                                 Tuesday: 'Upper Push (Hypertrophy)',
                                 Wednesday: 'Lower Quad (Endurance)',
                                 Thursday: 'Upper Pull (Strength)',
                                 Friday: 'Half-Marathon Prep',
                                 Saturday: 'KB Conditioning (Saturday)',
-                                Sunday: 'Free Choice Sunday' // Label changed
+                                Sunday: sundayChoice // Uses the state variable
                             };
 
                             const isSunday = d === 'Sunday';
-                            const activePlan = isSunday ? sundayChoice : dayPlan[d];
+                            const currentPlanName = defaultPlans[d];
 
-                            return h('div', { key: d, className: 'glass-strong p-5 rounded-2xl flex flex-col gap-3', style: { animationDelay: `${idx * 0.05}s` } },
+                            return h('div', { key: d, className: `glass-strong p-5 rounded-2xl flex flex-col gap-4 ${isSunday ? 'border-l-4 border-blue-500' : ''}`, style: { animationDelay: `${idx * 0.05}s` } },
                                 h('div', { className: 'flex justify-between items-center' },
                                     h('div', null,
-                                        h('p', { className: 'text-[10px] font-bold text-blue-400 uppercase mb-1' }, d),
-                                        h('p', { className: 'text-sm font-black' }, isSunday ? 'Free Choice: ' + activePlan : activePlan)
+                                        h('p', { className: 'text-[10px] font-black text-blue-400 uppercase mb-1' }, isSunday ? 'Free Choice Sunday' : d),
+                                        h('p', { className: 'text-sm font-black' }, currentPlanName)
                                     ),
                                     h('button', {
                                         onClick: () => {
-                                            setActiveWkt(activePlan);
-                                            setExData(templates[activePlan].map(obj => ({ name: obj.n, target: obj.r, sets: Array(obj.s).fill({ w: '', r: '' }) })));
+                                            setActiveWkt(currentPlanName);
+                                            // Load template data
+                                            setExData(templates[currentPlanName].map(obj => ({
+                                                name: obj.n,
+                                                target: obj.r,
+                                                sets: Array(obj.s).fill({ w: '', r: '' })
+                                            })));
                                             setCompletedSets({});
                                             setTab('workout');
                                         },
-                                        className: 'btn-primary px-4 py-2 rounded-xl font-black text-[10px] shadow-md hover:shadow-lg'
+                                        className: 'btn-primary px-6 py-2 rounded-xl font-black text-[10px] shadow-lg'
                                     }, 'START')
                                 ),
-                                // Sunday Dropdown Polishing
-                                isSunday && h('div', { className: 'pt-2 border-t border-white/10' },
-                                    h('p', { className: 'text-[9px] text-slate-500 uppercase font-bold mb-2' }, 'Select Sunday Protocol:'),
+
+                                // Sunday Selector UI
+                                isSunday && h('div', { className: 'bg-black/20 p-3 rounded-xl border border-white/5' },
+                                    h('p', { className: 'text-[9px] text-slate-500 uppercase font-black mb-2' }, 'Select Routine or Manual Entry'),
                                     h('select', {
-                                        className: 'w-full bg-slate-900 border border-blue-500/30 rounded-lg p-2 text-[10px] font-bold text-slate-200 outline-none focus:border-blue-500',
+                                        className: 'w-full bg-slate-800 border border-blue-500/20 rounded-lg p-2 text-[11px] font-bold text-blue-100 outline-none focus:border-blue-500/50',
                                         value: sundayChoice,
                                         onChange: (e) => setSundayChoice(e.target.value)
                                     }, Object.keys(templates).map(name => h('option', { key: name, value: name }, name)))
@@ -483,14 +483,26 @@
                             );
                         })
                     ),
-                    tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-24 fade-in' },
-                        h('div', { className: 'flex justify-between items-center mb-4' },
-                            h('h2', { className: 'text-lg font-black text-blue-400' }, activeWkt),
-                            h('div', { className: 'flex items-center gap-2' },
-                                h(ProgressRing, { progress: getWorkoutProgress(), size: 50 }),
-                                h('span', { className: 'text-xs font-bold text-slate-400' }, `${Math.round(getWorkoutProgress())}%`)
+                    tab === 'workout' && (activeWkt ? h('div', { className: 'space-y-4 pb-32 fade-in' },
+                        // Header Section
+                        h('div', { className: 'flex justify-between items-center mb-6' },
+                            h('div', null,
+                                h('button', {
+                                    onClick: () => setTab('plan'),
+                                    className: 'text-[10px] font-bold text-slate-500 uppercase mb-1 hover:text-blue-400 transition-colors'
+                                }, h('i', { className: 'fas fa-chevron-left mr-1' }), 'Back to Plan'),
+                                h('h2', { className: 'text-xl font-black text-white italic' }, activeWkt)
+                            ),
+                            h('div', { className: 'flex items-center gap-3 bg-blue-500/10 p-2 rounded-xl border border-blue-500/20' },
+                                h(ProgressRing, { progress: getWorkoutProgress(), size: 40 }),
+                                h('div', null,
+                                    h('p', { className: 'text-[8px] font-black text-blue-400 uppercase leading-none' }, 'Progress'),
+                                    h('p', { className: 'text-sm font-black text-white' }, `${Math.round(getWorkoutProgress())}%`)
+                                )
                             )
                         ),
+
+                        // Exercise List
                         exData.map((ex, i) => {
                             const lastWorkout = workouts.find(w => w.type === activeWkt);
                             let lastPerformance = null;
@@ -503,22 +515,50 @@
                                 }
                             }
 
-                            return h('div', { key: i, className: 'glass-strong p-5 rounded-2xl' },
-                                h('div', { className: 'flex justify-between mb-2' },
-                                    h('p', { className: 'text-sm font-black text-slate-100' }, ex.name),
-                                    h('span', { className: 'text-[10px] font-bold text-blue-400' }, 'Target: ' + ex.target)
+                            return h('div', { key: i, className: 'glass-strong p-5 rounded-2xl relative border-t-2 border-transparent focus-within:border-blue-500/50' },
+                                // Exercise Header (Editable Name)
+                                h('div', { className: 'flex justify-between items-start mb-4' },
+                                    h('div', { className: 'flex-1 mr-4' },
+                                        h('input', {
+                                            className: 'w-full bg-transparent border-b border-white/5 text-sm font-black text-slate-100 focus:border-blue-500 outline-none pb-1 transition-all',
+                                            value: ex.name,
+                                            placeholder: 'Exercise Name',
+                                            onChange: (e) => {
+                                                const n = [...exData];
+                                                n[i].name = e.target.value;
+                                                setExData(n);
+                                            }
+                                        }),
+                                        h('p', { className: 'text-[9px] text-slate-500 font-bold uppercase mt-1' }, 'Tap name to edit')
+                                    ),
+                                    h('div', { className: 'text-right' },
+                                        h('p', { className: 'text-[9px] font-black text-blue-400 uppercase' }, 'Target'),
+                                        h('input', {
+                                            className: 'bg-transparent text-[11px] font-bold text-slate-300 outline-none text-right w-16',
+                                            value: ex.target,
+                                            onChange: (e) => {
+                                                const n = [...exData];
+                                                n[i].target = e.target.value;
+                                                setExData(n);
+                                            }
+                                        })
+                                    )
                                 ),
-                                lastPerformance && h('div', { className: 'mb-3 p-2 bg-slate-900/50 rounded-lg border border-emerald-500/20' },
-                                    h('p', { className: 'text-[9px] text-emerald-400 font-bold uppercase mb-1' }, 'Last Time:'),
-                                    h('p', { className: 'text-[10px] text-slate-300 font-medium' }, lastPerformance)
+
+                                lastPerformance && h('div', { className: 'mb-4 p-2 bg-emerald-500/5 rounded-lg border border-emerald-500/10' },
+                                    h('p', { className: 'text-[8px] text-emerald-400 font-black uppercase mb-1' }, 'Previous Session:'),
+                                    h('p', { className: 'text-[10px] text-slate-400 font-medium' }, lastPerformance)
                                 ),
+
+                                // Sets Logic
                                 ex.sets.map((set, si) => {
                                     const isCompleted = completedSets[`${i}-${si}`];
                                     return h('div', { key: si, className: 'flex gap-2 mb-2 items-center' },
+                                        h('div', { className: 'text-[10px] font-black text-slate-600 w-5' }, `S${si + 1}`),
                                         h('input', {
                                             placeholder: 'LBS',
                                             type: 'number',
-                                            className: 'input-box flex-1',
+                                            className: 'input-box flex-1 py-2 text-sm',
                                             value: set.w,
                                             onChange: (e) => {
                                                 const n = [...exData];
@@ -529,7 +569,7 @@
                                         h('input', {
                                             placeholder: 'REPS',
                                             type: 'number',
-                                            className: 'input-box flex-1',
+                                            className: 'input-box flex-1 py-2 text-sm',
                                             value: set.r,
                                             onChange: (e) => {
                                                 const n = [...exData];
@@ -539,18 +579,40 @@
                                         }),
                                         h('button', {
                                             onClick: () => markSetComplete(i, si),
-                                            className: `w-10 h-10 rounded-lg ${isCompleted ? 'bg-emerald-500' : 'bg-slate-700'} flex items-center justify-center transition-all`
-                                        }, h('i', { className: `fas fa-check text-white text-sm ${isCompleted ? 'animate-pulse' : ''}` }))
+                                            className: `w-10 h-10 rounded-xl ${isCompleted ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-slate-800 border border-white/5'} flex items-center justify-center transition-all active:scale-90`
+                                        }, h('i', { className: `fas fa-check text-white text-xs ${isCompleted ? 'scale-110' : 'opacity-30'}` }))
                                     );
-                                })
+                                }),
+
+                                // Add Set for specific exercise
+                                h('button', {
+                                    onClick: () => {
+                                        const n = [...exData];
+                                        n[i].sets.push({ w: '', r: '' });
+                                        setExData(n);
+                                    },
+                                    className: 'mt-2 text-[9px] font-black text-slate-500 uppercase hover:text-blue-400 transition-colors'
+                                }, h('i', { className: 'fas fa-plus mr-1' }), 'Add Set')
                             );
                         }),
-                        h('button', { onClick: saveWkt, className: 'fixed bottom-6 left-5 right-5 max-w-md mx-auto btn-success p-5 rounded-2xl font-black uppercase text-xs shadow-2xl hover:shadow-3xl' },
-                            h('i', { className: 'fas fa-trophy mr-2' }),
-                            'Complete & Sync'
+
+                        // Global "Add New Exercise" Button
+                        h('button', {
+                            onClick: () => setExData([...exData, { name: 'New Exercise', target: '0', sets: [{ w: '', r: '' }] }]),
+                            className: 'w-full py-4 border-2 border-dashed border-slate-700 rounded-2xl text-slate-500 font-black text-[10px] uppercase hover:border-blue-500/50 hover:text-blue-400 transition-all'
+                        }, h('i', { className: 'fas fa-plus-circle mr-2' }), 'Add Exercise to Session'),
+
+                        // Sticky Save Button
+                        h('div', { className: 'fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0a0e27] to-transparent pointer-events-none' },
+                            h('button', {
+                                onClick: saveWkt,
+                                className: 'pointer-events-auto w-full max-w-md mx-auto btn-success p-5 rounded-2xl font-black uppercase text-xs shadow-2xl hover:shadow-emerald-500/20 flex items-center justify-center gap-2'
+                            },
+                                h('i', { className: 'fas fa-cloud-upload-alt text-lg' }),
+                                'Sync Session to Cloud'
+                            )
                         )
                     ) : null),
-
                     tab === 'metrics' && h('div', { className: 'space-y-6 fade-in' },
                         h(WeightChart, { metrics }),
                         h('div', { className: 'glass-strong p-6 rounded-3xl' },
